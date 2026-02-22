@@ -1,4 +1,6 @@
 mod commands;
+mod features;
+mod util;
 
 use std::env;
 
@@ -41,14 +43,16 @@ async fn main() {
 
     let options = poise::FrameworkOptions {
         commands: vec![commands::ping::ping()],
+        event_handler: |ctx, event, framework, data| {
+            Box::pin(event_handler_root(ctx, event, framework, data))
+        },
         on_error: |error| Box::pin(on_error(error)),
         ..Default::default()
     };
 
     let framework = poise::Framework::builder()
-        .setup(move |ctx, ready, framework| {
+        .setup(move |ctx, _, framework| {
             Box::pin(async move {
-                println!("Logged in as {}", ready.user.name);
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {})
             })
@@ -61,4 +65,30 @@ async fn main() {
         .await;
 
     client.unwrap().start().await.unwrap();
+}
+
+async fn event_handler_root(
+    ctx: &serenity::Context,
+    event: &serenity::FullEvent,
+    framework: poise::FrameworkContext<'_, Data, Error>,
+    data: &Data,
+) -> Result<(), Error> {
+    event_handler(ctx, event, framework, data).await?;
+    features::dad::event_handler(ctx, event, framework, data).await?;
+    Ok(())
+}
+
+async fn event_handler(
+    _ctx: &serenity::Context,
+    event: &serenity::FullEvent,
+    _framework: poise::FrameworkContext<'_, Data, Error>,
+    _: &Data,
+) -> Result<(), Error> {
+    match event {
+        serenity::FullEvent::Ready { data_about_bot, .. } => {
+            println!("Logged in as {}", data_about_bot.user.name);
+        }
+        _ => {}
+    }
+    Ok(())
 }
