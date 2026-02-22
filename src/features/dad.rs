@@ -65,9 +65,7 @@ pub async fn event_handler(
     _data: &Data,
 ) -> Result<(), Error> {
     match event {
-        serenity::FullEvent::Message { new_message } => {
-            dad_joke(ctx, new_message).await?
-        }
+        serenity::FullEvent::Message { new_message } => dad_joke(ctx, new_message).await?,
         _ => {}
     }
     Ok(())
