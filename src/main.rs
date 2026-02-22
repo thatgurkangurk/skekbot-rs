@@ -42,7 +42,11 @@ async fn main() {
         | serenity::GatewayIntents::MESSAGE_CONTENT;
 
     let options = poise::FrameworkOptions {
-        commands: vec![commands::ping::ping(), commands::dad::dad()],
+        commands: vec![
+            commands::ping::ping(),
+            commands::dad::dad(),
+            commands::rock_paper_scissors::rock_paper_scissors(),
+        ],
         event_handler: |ctx, event, framework, data| {
             Box::pin(event_handler_root(ctx, event, framework, data))
         },

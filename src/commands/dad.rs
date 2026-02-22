@@ -15,9 +15,7 @@ async fn fetch_dad_joke() -> Result<DadJokeResponse, Error> {
     Ok(response)
 }
 
-#[poise::command(
-    slash_command,
-)]
+#[poise::command(slash_command)]
 /// gives a (not) very funny dad joke
 pub async fn dad(ctx: Context<'_>) -> Result<(), Error> {
     let joke = match fetch_dad_joke().await {
