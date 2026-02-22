@@ -169,7 +169,7 @@ pub async fn rock_paper_scissors(
         ])];
 
         CreateReply::default()
-            .content("game.")
+            .content(format!("{against}, {} has challenged you to a game of rock paper scissors!", ctx.author()))
             .components(components)
     };
 
