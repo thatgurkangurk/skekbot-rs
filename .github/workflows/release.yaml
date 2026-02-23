@@ -47,3 +47,4 @@ jobs:
         with:
           executable-name: skekbot-rs
           target: ${{ matrix.platform.target }}
+          action-gh-release-parameters: '{ "make_latest": true }'
