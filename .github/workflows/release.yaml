@@ -1,4 +1,4 @@
-name: Release
+name: Deploy
 
 on:
   push:
@@ -9,66 +9,69 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build ${{ matrix.target }}
+  build-and-upload:
+    name: Build and upload
     runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
+        # You can add more, for any target you'd like!
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            binary_name: skekbot-rs
-            asset_name: skekbot-rs-linux-x86_64
+          - build: linux
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
 
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            binary_name: skekbot-rs.exe
-            asset_name: skekbot-rs-windows-x86_64.exe
-
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            binary_name: skekbot-rs
-            asset_name: skekbot-rs-macos-arm64
+          - build: macos
+            os: macos-latest
+            target: x86_64-apple-darwin
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
+
+      - name: Get the release version from the tag
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Install Rust
+        # Or @nightly if you want
         uses: dtolnay/rust-toolchain@stable
+        # Arguments to pass in
         with:
+          # Make Rust compile to our target (defined in the matrix)
           targets: ${{ matrix.target }}
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --verbose --release --target ${{ matrix.target }}
 
-      - name: Rename binary
+      - name: Build archive
         shell: bash
         run: |
-          mkdir dist
-          cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/${{ matrix.asset_name }}
+          # Replace with the name of your binary
+          binary_name="skekbot-rs"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+          dirname="$binary_name-${{ env.VERSION }}-${{ matrix.target }}"
+          mkdir "$dirname"
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv "target/${{ matrix.target }}/release/$binary_name.exe" "$dirname"
+          else
+            mv "target/${{ matrix.target }}/release/$binary_name" "$dirname"
+          fi
+
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            7z a "$dirname.zip" "$dirname"
+            echo "ASSET=$dirname.zip" >> $GITHUB_ENV
+          else
+            tar -czf "$dirname.tar.gz" "$dirname"
+            echo "ASSET=$dirname.tar.gz" >> $GITHUB_ENV
+          fi
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: ${{ matrix.asset_name }}
-          path: dist/${{ matrix.asset_name }}
-
-  release:
-    name: Create Release
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            ${{ env.ASSET }}
