@@ -2,9 +2,9 @@ mod commands;
 mod features;
 mod util;
 
-use std::env;
-
+use console::style;
 use poise::serenity_prelude as serenity;
+use std::env;
 
 // Types used by all command functions
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -30,8 +30,70 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
+fn print_startup_info() {
+    let lines = [
+        format!("skekbot-rs v{} by gurkan", env!("CARGO_PKG_VERSION")),
+        "MIT license".to_string(),
+        "https://github.com/thatgurkangurk/skekbot-rs".to_string(),
+    ];
+
+    let content_width = lines.iter().map(|l| l.len()).max().unwrap();
+    let total_width = content_width + 4;
+
+    println!();
+
+    // top border
+    println!(
+        "{}{}{}",
+        style("╔").cyan().bold(),
+        style("═".repeat(total_width)).cyan().bold(),
+        style("╗").cyan().bold(),
+    );
+
+    for (i, line) in lines.iter().enumerate() {
+        let padding = content_width - line.len();
+        let left = padding / 2;
+        let right = padding - left;
+
+        let content = if i == 0 {
+            format!(
+                "{}{}{}",
+                " ".repeat(left),
+                style(line).bold(),
+                " ".repeat(right),
+            )
+        } else {
+            format!(
+                "{}{}{}",
+                " ".repeat(left),
+                line,
+                " ".repeat(right),
+            )
+        };
+
+        println!(
+            "{}  {}  {}",
+            style("║").cyan().bold(),
+            content,
+            style("║").cyan().bold(),
+        );
+    }
+
+    // bottom border
+    println!(
+        "{}{}{}",
+        style("╚").cyan().bold(),
+        style("═".repeat(total_width)).cyan().bold(),
+        style("╝").cyan().bold(),
+    );
+
+    println!();
+}
+
 #[tokio::main]
 async fn main() {
+    print_startup_info();
+
     dotenvy::dotenv().expect("expected .env to load");
 
     let token = env::var("DISCORD_TOKEN")
