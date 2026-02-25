@@ -1,10 +1,14 @@
 mod commands;
 mod features;
 mod util;
+mod event;
 
 use console::style;
 use poise::serenity_prelude as serenity;
 use std::env;
+
+use crate::util::validate_token;
+use crate::event::{event_handler_root};
 
 // Types used by all command functions
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -96,8 +100,13 @@ async fn main() {
 
     dotenvy::dotenv().ok();
 
-    let token = env::var("DISCORD_TOKEN")
-        .expect("expected the DISCORD_TOKEN environment variable to exist");
+    let binding = env::var("DISCORD_TOKEN").ok();
+    let token = binding.as_deref();
+
+    let token = match validate_token(token) {
+        Ok(token) => token,
+        Err(err) => panic!("{}", err.to_string())
+    };
 
     let intents = serenity::GatewayIntents::GUILDS
         | serenity::GatewayIntents::GUILD_MESSAGES
@@ -131,30 +140,4 @@ async fn main() {
         .await;
 
     client.unwrap().start().await.unwrap();
-}
-
-async fn event_handler_root(
-    ctx: &serenity::Context,
-    event: &serenity::FullEvent,
-    framework: poise::FrameworkContext<'_, Data, Error>,
-    data: &Data,
-) -> Result<(), Error> {
-    event_handler(ctx, event, framework, data).await?;
-    features::dad::event_handler(ctx, event, framework, data).await?;
-    Ok(())
-}
-
-async fn event_handler(
-    _ctx: &serenity::Context,
-    event: &serenity::FullEvent,
-    _framework: poise::FrameworkContext<'_, Data, Error>,
-    _: &Data,
-) -> Result<(), Error> {
-    match event {
-        serenity::FullEvent::Ready { data_about_bot, .. } => {
-            println!("Logged in as {}", data_about_bot.user.name);
-        }
-        _ => {}
-    }
-    Ok(())
 }
