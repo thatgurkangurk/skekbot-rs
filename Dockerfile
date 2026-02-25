@@ -1,20 +1,24 @@
-FROM rust:alpine AS build
+FROM lukemathwalker/cargo-chef:latest-rust-alpine3.23 AS chef
 LABEL org.opencontainers.image.source="https://github.com/thatgurkangurk/skekbot-rs"
 
-RUN apk update && \
-    apk upgrade --no-cache && \
-    apk add --no-cache lld mold musl musl-dev libc-dev cmake clang clang-dev openssl file \
-        libressl-dev git make build-base bash curl wget zip gnupg coreutils gcc g++  zstd binutils ca-certificates upx
-
 WORKDIR /skekbot-rs
-COPY . ./
-# or make build
-RUN cargo build --release
 
-####################################################################################################
-## Final image
-####################################################################################################
-FROM alpine:3.20
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /skekbot-rs/recipe.json recipe.json
+
+RUN cargo chef cook --release --recipe-path recipe.json
+
+COPY . .
+RUN cargo build --release --bin skekbot-rs
+
+FROM alpine:3.23 AS runtime
+WORKDIR /skekbot-rs
+
+COPY --from=builder /skekbot-rs/target/release/skekbot-rs /usr/local/bin
 
 # Install runtime deps (TLS + timezone)
 RUN apk add --no-cache ca-certificates tzdata && \
@@ -23,12 +27,7 @@ RUN apk add --no-cache ca-certificates tzdata && \
 # Create non-root user
 RUN addgroup -S skekbot && adduser -S skekbot -G skekbot
 
-WORKDIR /app
-
-# Copy compiled binary
-COPY --from=build /skekbot-rs/target/release/skekbot-rs /bin/skekbot-rs
-
 # Use unprivileged user
 USER skekbot
 
-ENTRYPOINT ["/bin/skekbot-rs"]
+ENTRYPOINT [ "/usr/local/bin/skekbot-rs" ]
