@@ -3,6 +3,12 @@ name = "skekbot-rs"
 version = "0.1.3"
 edition = "2024"
 
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+codegen-units = 1
+
 [dependencies]
 console = "0.16.2"
 dotenvy = "0.15.7"
