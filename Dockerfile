@@ -60,6 +60,8 @@ COPY --from=build /skekbot-rs/target/release/skekbot-rs /bin/skekbot-rs
 # Use an unprivileged user.
 USER skekbot-rs:skekbot-rs
 
+ENV DISCORD_TOKEN="CHANGE ME"
+
 # The scratch image doesn't have a /tmp folder, you may need it
 # WORKDIR /tmp
 
