@@ -5,6 +5,7 @@ mod event;
 
 use console::style;
 use poise::serenity_prelude as serenity;
+use ::serenity::prelude::TypeMapKey;
 use std::env;
 
 use crate::util::validate_token;
@@ -15,7 +16,13 @@ type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
 // Custom user data passed to all command functions
-pub struct Data {}
+pub struct Data {
+     bot_name: String
+}
+
+impl TypeMapKey for Data {
+    type Value = String;
+}
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     // This is our custom error handler
@@ -129,7 +136,9 @@ async fn main() {
         .setup(move |ctx, _, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(Data {})
+                Ok(Data {
+                    bot_name: "Super Hi Tech Ai".to_string()
+                })
             })
         })
         .options(options)

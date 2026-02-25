@@ -5,7 +5,7 @@ use poise::serenity_prelude as serenity;
 const IM: &[&str] = &["im", "i'm", "i’m"];
 const MAX_LENGTH: usize = 75;
 
-async fn dad_joke(ctx: &serenity::Context, message: &Message) -> Result<(), Error> {
+async fn dad_joke(ctx: &serenity::Context, message: &Message, data: &Data) -> Result<(), Error> {
     if message.author.bot {
         return Ok(());
     }
@@ -52,7 +52,7 @@ async fn dad_joke(ctx: &serenity::Context, message: &Message) -> Result<(), Erro
     name = crate::util::sanitise_pings(&name);
 
     message
-        .reply(ctx, format!("Hi {}, I'm Skekbot!", name))
+        .reply(ctx, format!("Hi {}, I'm {}!", name, data.bot_name))
         .await?;
 
     Ok(())
@@ -62,10 +62,10 @@ pub async fn event_handler(
     ctx: &serenity::Context,
     event: &serenity::FullEvent,
     _framework: poise::FrameworkContext<'_, Data, Error>,
-    _data: &Data,
+    data: &Data,
 ) -> Result<(), Error> {
     match event {
-        serenity::FullEvent::Message { new_message } => dad_joke(ctx, new_message).await?,
+        serenity::FullEvent::Message { new_message } => dad_joke(ctx, new_message, data).await?,
         _ => {}
     }
     Ok(())
