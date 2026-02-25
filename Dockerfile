@@ -11,60 +11,24 @@ COPY . ./
 # or make build
 RUN cargo build --release
 
-
-####################################################################################################
-## This stage is used to get the correct files into the final image
-####################################################################################################
-FROM alpine:latest AS files
-
-# mailcap is used for content type (MIME type) detection
-# tzdata is used for timezone info
-RUN apk update && \
-    apk upgrade --no-cache && \
-    apk add --no-cache ca-certificates mailcap tzdata
-
-RUN update-ca-certificates
-
-ENV USER=skekbot-rs
-ENV UID=10001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid "${UID}" \
-    "${USER}"
-
-
 ####################################################################################################
 ## Final image
 ####################################################################################################
-FROM scratch
+FROM alpine:3.20
 
-# /etc/nsswitch.conf may be used by some DNS resolvers
-# /etc/mime.types may be used to detect the MIME type of files
-COPY --from=files --chmod=444 \
-    /etc/passwd \
-    /etc/group \
-    /etc/nsswitch.conf \
-    /etc/mime.types \
-    /etc/
+# Install runtime deps (TLS + timezone)
+RUN apk add --no-cache ca-certificates tzdata && \
+    update-ca-certificates
 
-COPY --from=files --chmod=444 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=files --chmod=444 /usr/share/zoneinfo /usr/share/zoneinfo
-
-# Copy our build
-COPY --from=build /skekbot-rs/target/release/skekbot-rs /bin/skekbot-rs
-
-# Use an unprivileged user.
-USER skekbot-rs:skekbot-rs
-
-ENV DISCORD_TOKEN="CHANGE ME"
-
-# The scratch image doesn't have a /tmp folder, you may need it
-# WORKDIR /tmp
+# Create non-root user
+RUN addgroup -S skekbot && adduser -S skekbot -G skekbot
 
 WORKDIR /app
+
+# Copy compiled binary
+COPY --from=build /skekbot-rs/target/release/skekbot-rs /bin/skekbot-rs
+
+# Use unprivileged user
+USER skekbot
 
 ENTRYPOINT ["/bin/skekbot-rs"]
