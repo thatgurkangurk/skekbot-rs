@@ -1,10 +1,7 @@
 use crate::{Context, Error};
 use ::serenity::all::{CreateInteractionResponseMessage, EditMessage};
 use poise::{CreateReply, serenity_prelude as serenity};
-use rand::{
-    rng,
-    seq::{IndexedRandom},
-};
+use rand::seq::IndexedRandom;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RockPaperScissorsOption {
@@ -22,6 +19,21 @@ impl RockPaperScissorsOption {
         }
     }
 
+    fn as_emoji(&self) -> serenity::ReactionType {
+        match self {
+            Self::Paper => serenity::ReactionType::Unicode("📄".to_string()),
+            Self::Rock => serenity::ReactionType::Unicode("🪨".to_string()),
+            Self::Scissors => serenity::ReactionType::Unicode("✂️".to_string()),
+        }
+    }
+
+    fn as_button(&self, interaction_id: &u64) -> serenity::CreateButton {
+        serenity::CreateButton::new(format!("{interaction_id}.{}", self.as_str()))
+            .style(serenity::ButtonStyle::Primary)
+            .emoji(self.as_emoji())
+            .label(self.as_str())
+    }
+
     fn beats(self, other: Self) -> bool {
         matches!(
             (self, other),
@@ -30,23 +42,23 @@ impl RockPaperScissorsOption {
                 | (Self::Paper, Self::Rock)
         )
     }
-}
 
-fn get_random_option() -> RockPaperScissorsOption {
-    let options = [
-        RockPaperScissorsOption::Rock,
-        RockPaperScissorsOption::Paper,
-        RockPaperScissorsOption::Scissors,
-    ];
+    fn get_random_option() -> RockPaperScissorsOption {
+        let options = [
+            RockPaperScissorsOption::Rock,
+            RockPaperScissorsOption::Paper,
+            RockPaperScissorsOption::Scissors,
+        ];
 
-    let mut the_rng = rng();
-    *options.choose(&mut the_rng).unwrap()
+        let mut rng = rand::rng();
+        *options.choose(&mut rng).unwrap()
+    }
 }
 
 async fn announce(
     ctx: Context<'_>,
     interaction: &serenity::ComponentInteraction,
-    user1: &serenity::User, 
+    user1: &serenity::User,
     user2: &serenity::User,
     user1_choice: RockPaperScissorsOption,
     user2_choice: RockPaperScissorsOption,
@@ -154,22 +166,16 @@ pub async fn rock_paper_scissors(
 
     let reply = {
         let components = vec![serenity::CreateActionRow::Buttons(vec![
-            serenity::CreateButton::new(format!("{rock_paper_scissors_id}.Rock"))
-                .style(serenity::ButtonStyle::Primary)
-                .emoji(serenity::ReactionType::Unicode("🪨".to_string()))
-                .label("Rock"),
-            serenity::CreateButton::new(format!("{rock_paper_scissors_id}.Paper"))
-                .style(serenity::ButtonStyle::Primary)
-                .emoji(serenity::ReactionType::Unicode("📄".to_string()))
-                .label("Paper"),
-            serenity::CreateButton::new(format!("{rock_paper_scissors_id}.Scissors"))
-                .style(serenity::ButtonStyle::Primary)
-                .emoji(serenity::ReactionType::Unicode("✂️".to_string()))
-                .label("Scissors"),
+            RockPaperScissorsOption::Rock.as_button(&rock_paper_scissors_id),
+            RockPaperScissorsOption::Paper.as_button(&rock_paper_scissors_id),
+            RockPaperScissorsOption::Scissors.as_button(&rock_paper_scissors_id),
         ])];
 
         CreateReply::default()
-            .content(format!("{against}, {} has challenged you to a game of rock paper scissors!", ctx.author()))
+            .content(format!(
+                "{against}, {} has challenged you to a game of rock paper scissors!",
+                ctx.author()
+            ))
             .components(components)
     };
 
@@ -216,14 +222,14 @@ pub async fn rock_paper_scissors(
         }
 
         if against.bot || against.id == ctx.author().id {
-            let random_option = get_random_option();
+            let random_option = RockPaperScissorsOption::get_random_option();
 
             user_2_choice = Some(random_option);
         }
 
         if let (Some(c1), Some(c2)) = (user_1_choice, user_2_choice) {
             announce(ctx, &mci, &ctx.author(), &against, c1, c2).await?;
-            return Ok(());
+            break;
         }
 
         mci.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge)
