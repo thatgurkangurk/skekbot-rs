@@ -94,7 +94,7 @@ fn print_startup_info() {
 async fn main() {
     print_startup_info();
 
-    dotenvy::dotenv().expect("expected .env to load");
+    dotenvy::dotenv().ok();
 
     let token = env::var("DISCORD_TOKEN")
         .expect("expected the DISCORD_TOKEN environment variable to exist");
