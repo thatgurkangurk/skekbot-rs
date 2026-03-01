@@ -1,7 +1,7 @@
 use poise::serenity_prelude as serenity;
 
+use crate::features;
 use crate::{Data, Error};
-use crate::{features};
 
 pub async fn event_handler_root(
     ctx: &serenity::Context,

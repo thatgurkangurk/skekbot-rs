@@ -1,15 +1,15 @@
 mod commands;
+mod event;
 mod features;
 mod util;
-mod event;
 
+use ::serenity::prelude::TypeMapKey;
 use console::style;
 use poise::serenity_prelude as serenity;
-use ::serenity::prelude::TypeMapKey;
 use std::env;
 
+use crate::event::event_handler_root;
 use crate::util::validate_token;
-use crate::event::{event_handler_root};
 
 // Types used by all command functions
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -17,7 +17,7 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 
 // Custom user data passed to all command functions
 pub struct Data {
-     bot_name: String
+    bot_name: String,
 }
 
 impl TypeMapKey for Data {
@@ -74,12 +74,7 @@ fn print_startup_info() {
                 " ".repeat(right),
             )
         } else {
-            format!(
-                "{}{}{}",
-                " ".repeat(left),
-                line,
-                " ".repeat(right),
-            )
+            format!("{}{}{}", " ".repeat(left), line, " ".repeat(right),)
         };
 
         println!(
@@ -112,7 +107,7 @@ async fn main() {
 
     let token = match validate_token(token) {
         Ok(token) => token,
-        Err(err) => panic!("{}", err.to_string())
+        Err(err) => panic!("{}", err.to_string()),
     };
 
     let intents = serenity::GatewayIntents::GUILDS
@@ -137,7 +132,7 @@ async fn main() {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {
-                    bot_name: "Super Hi Tech Ai".to_string()
+                    bot_name: "Super Hi Tech Ai".to_string(),
                 })
             })
         })
