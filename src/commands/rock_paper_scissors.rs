@@ -124,7 +124,7 @@ async fn announce(
                     Ok(()) => {}
                     Err(serenity::Error::Http(error)) => {
                         let status = error.status_code().ok_or("Missing status code")?;
-                        println!("error: {status}" );
+                        println!("error: {status}");
                     }
                     Err(e) => {
                         println!("Other error: {e}");

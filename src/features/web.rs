@@ -1,3 +1,5 @@
+#![allow(clippy::needless_for_each)]
+
 use axum::{
     Json, Router,
     extract::State,
@@ -12,9 +14,15 @@ use serenity::all::{ChannelId, MessageId};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use utoipa::{
+    Modify, OpenApi, ToSchema,
+    openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
+};
+use utoipa_scalar::{Scalar, Servable};
+
 use serenity::Client;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct MessageRequest {
     channel_id: String,
@@ -44,12 +52,34 @@ impl BotState {
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/health",
+    responses(
+        (status = 200, description = "server is healthy", body = serde_json::Value)
+    )
+)]
 async fn health_check() -> impl IntoResponse {
     Json(json!({
         "status": "ok",
     }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/send-message",
+    request_body = MessageRequest,
+    responses(
+        (status = 200, description = "message sent successfully"),
+        (status = 400, description = "bad request (like invalid channel id)"),
+        (status = 401, description = "unauthorized (missing token)"),
+        (status = 403, description = "forbidden (invalid token)"),
+        (status = 500, description = "internal server srror")
+    ),
+    security(
+        ("bearer_auth" = [])
+    )
+)]
 async fn send_message_handler(
     State(state): State<BotState>,
     headers: HeaderMap,
@@ -103,10 +133,32 @@ async fn send_message_handler(
     }
 }
 
+#[derive(OpenApi)]
+#[openapi(
+    paths(health_check, send_message_handler),
+    components(schemas(MessageRequest)),
+    modifiers(&SecurityAddon)
+)]
+struct ApiDoc;
+
+struct SecurityAddon;
+
+impl Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "bearer_auth",
+                SecurityScheme::Http(HttpBuilder::new().scheme(HttpAuthScheme::Bearer).build()),
+            );
+        }
+    }
+}
+
 fn create_web(state: BotState) -> Router {
     Router::new()
         .route("/health", get(health_check))
         .route("/send-message", post(send_message_handler))
+        .merge(Scalar::with_url("/docs", ApiDoc::openapi()))
         .with_state(state)
 }
 
