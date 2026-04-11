@@ -20,17 +20,14 @@ async fn event_handler(
     _framework: poise::FrameworkContext<'_, Data, Error>,
     _data: &Data,
 ) -> Result<(), Error> {
-    match event {
-        serenity::FullEvent::Ready { data_about_bot, .. } => {
-            println!("Logged in as {}", data_about_bot.user.name);
-            let mut data = ctx.data.write().await;
+    if let serenity::FullEvent::Ready { data_about_bot, .. } = event {
+        println!("Logged in as {}", data_about_bot.user.name);
+        let mut data = ctx.data.write().await;
 
-            let mut fallback_name = data_about_bot.user.name.clone();
-            let name = data.get_mut::<Data>().unwrap_or(&mut fallback_name);
+        let mut fallback_name = data_about_bot.user.name.clone();
+        let name = data.get_mut::<Data>().unwrap_or(&mut fallback_name);
 
-            *name = data_about_bot.user.name.clone();
-        }
-        _ => {}
+        *name = data_about_bot.user.name.clone();
     }
     Ok(())
 }

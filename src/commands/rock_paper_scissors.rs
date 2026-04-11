@@ -228,7 +228,7 @@ pub async fn rock_paper_scissors(
         }
 
         if let (Some(c1), Some(c2)) = (user_1_choice, user_2_choice) {
-            announce(ctx, &mci, &ctx.author(), &against, c1, c2).await?;
+            announce(ctx, &mci, ctx.author(), &against, c1, c2).await?;
             break;
         }
 

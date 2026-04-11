@@ -1,5 +1,5 @@
 pub fn sanitise_pings(message: &str) -> String {
-    message.replace("@", "@​")
+    message.replace("@", "@\u{200B}")
 }
 
 pub fn validate_token(token: Option<&str>) -> Result<&str, &str> {

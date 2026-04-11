@@ -53,7 +53,7 @@ fn dad<'a>(content: &'a str, im_trigger_words: &[&str]) -> Option<&'a str> {
     let remainder = &content[byte_start..];
 
     let end = remainder
-        .find(|c: char| matches!(c, '.' | ',' | '!' | '?'))
+        .find(['.', ',', '!', '?'])
         .unwrap_or(remainder.len());
 
     let result = remainder[..end].trim();
@@ -105,9 +105,6 @@ pub async fn event_handler(
     _framework: poise::FrameworkContext<'_, Data, Error>,
     data: &Data,
 ) -> Result<(), Error> {
-    match event {
-        serenity::FullEvent::Message { new_message } => dad_joke(ctx, new_message, data).await?,
-        _ => {}
-    }
+    if let serenity::FullEvent::Message { new_message } = event { dad_joke(ctx, new_message, data).await? }
     Ok(())
 }
