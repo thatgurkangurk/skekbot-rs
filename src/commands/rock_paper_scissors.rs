@@ -11,7 +11,7 @@ enum RockPaperScissorsOption {
 }
 
 impl RockPaperScissorsOption {
-    fn as_str(&self) -> &'static str {
+    const fn as_str(self) -> &'static str {
         match self {
             Self::Rock => "Rock",
             Self::Paper => "Paper",
@@ -19,7 +19,7 @@ impl RockPaperScissorsOption {
         }
     }
 
-    fn as_emoji(&self) -> serenity::ReactionType {
+    fn as_emoji(self) -> serenity::ReactionType {
         match self {
             Self::Paper => serenity::ReactionType::Unicode("📄".to_string()),
             Self::Rock => serenity::ReactionType::Unicode("🪨".to_string()),
@@ -27,14 +27,14 @@ impl RockPaperScissorsOption {
         }
     }
 
-    fn as_button(&self, interaction_id: &u64) -> serenity::CreateButton {
+    fn as_button(self, interaction_id: u64) -> serenity::CreateButton {
         serenity::CreateButton::new(format!("{interaction_id}.{}", self.as_str()))
             .style(serenity::ButtonStyle::Primary)
             .emoji(self.as_emoji())
             .label(self.as_str())
     }
 
-    fn beats(self, other: Self) -> bool {
+    const fn beats(self, other: Self) -> bool {
         matches!(
             (self, other),
             (Self::Rock, Self::Scissors)
@@ -43,15 +43,11 @@ impl RockPaperScissorsOption {
         )
     }
 
-    fn get_random_option() -> RockPaperScissorsOption {
-        let options = [
-            RockPaperScissorsOption::Rock,
-            RockPaperScissorsOption::Paper,
-            RockPaperScissorsOption::Scissors,
-        ];
+    fn get_random_option() -> Self {
+        let options = [Self::Rock, Self::Paper, Self::Scissors];
 
         let mut rng = rand::rng();
-        *options.choose(&mut rng).unwrap()
+        options.choose(&mut rng).copied().unwrap_or(Self::Rock)
     }
 }
 
@@ -115,19 +111,20 @@ async fn announce(
             if let Ok(mut member) = guild_id.member(&ctx.http(), loser.id).await {
                 let future_time = std::time::SystemTime::now()
                     .checked_add(std::time::Duration::from_secs(60))
-                    .unwrap()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .ok_or("Overflow occurred while calculating future time")?
+                    .duration_since(std::time::UNIX_EPOCH)?
                     .as_secs();
-                let timestamp = serenity::Timestamp::from_unix_timestamp(future_time as i64)?;
+                let timestamp =
+                    serenity::Timestamp::from_unix_timestamp(future_time.cast_signed())?;
                 let result = member
                     .disable_communication_until_datetime(&ctx.http(), timestamp)
                     .await;
 
                 match result {
-                    Ok(_) => {}
+                    Ok(()) => {}
                     Err(serenity::Error::Http(error)) => {
-                        println!("error: {}", error.status_code().unwrap());
+                        let status = error.status_code().ok_or("Missing status code")?;
+                        println!("error: {status}" );
                     }
                     Err(e) => {
                         println!("Other error: {e}");
@@ -147,7 +144,7 @@ async fn announce(
                     user1_choice.as_str(),
                     user2,
                     user2_choice.as_str(),
-                    outcome.unwrap_or("this was unexpected... NO ONE WON".to_string())
+                    outcome.unwrap_or_else(|| "this was unexpected... NO ONE WON".to_string())
                 )),
             ),
         )
@@ -166,9 +163,9 @@ pub async fn rock_paper_scissors(
 
     let reply = {
         let components = vec![serenity::CreateActionRow::Buttons(vec![
-            RockPaperScissorsOption::Rock.as_button(&rock_paper_scissors_id),
-            RockPaperScissorsOption::Paper.as_button(&rock_paper_scissors_id),
-            RockPaperScissorsOption::Scissors.as_button(&rock_paper_scissors_id),
+            RockPaperScissorsOption::Rock.as_button(rock_paper_scissors_id),
+            RockPaperScissorsOption::Paper.as_button(rock_paper_scissors_id),
+            RockPaperScissorsOption::Scissors.as_button(rock_paper_scissors_id),
         ])];
 
         CreateReply::default()

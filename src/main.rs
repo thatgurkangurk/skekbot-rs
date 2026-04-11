@@ -9,6 +9,7 @@ use poise::serenity_prelude as serenity;
 use std::env;
 
 use crate::event::event_handler_root;
+use crate::features::web::{self, BotState};
 use crate::util::validate_token;
 
 // Types used by all command functions
@@ -29,13 +30,13 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     // They are many errors that can occur, so we only handle the ones we want to customize
     // and forward the rest to the default handler
     match error {
-        poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
+        poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {error:?}"),
         poise::FrameworkError::Command { error, ctx, .. } => {
             println!("Error in command `{}`: {:?}", ctx.command().name, error,);
         }
         error => {
             if let Err(e) = poise::builtins::on_error(error).await {
-                println!("Error while handling error: {}", e)
+                println!("Error while handling error: {e}");
             }
         }
     }
@@ -48,7 +49,11 @@ fn print_startup_info() {
         "https://github.com/thatgurkangurk/skekbot-rs".to_string(),
     ];
 
-    let content_width = lines.iter().map(|l| l.len()).max().unwrap();
+    let content_width = lines
+        .iter()
+        .map(std::string::String::len)
+        .max()
+        .unwrap_or(0);
     let total_width = content_width + 4;
 
     println!();
@@ -139,9 +144,22 @@ async fn main() {
         .options(options)
         .build();
 
-    let client = serenity::ClientBuilder::new(token, intents)
+    let client = match serenity::ClientBuilder::new(token, intents)
         .framework(framework)
-        .await;
+        .await
+    {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("failed to create client: {e:?}");
+            return;
+        }
+    };
 
-    client.unwrap().start().await.unwrap();
+    let state = BotState::new(client);
+
+    let bot_state = state.clone();
+    tokio::spawn(async move {
+        bot_state.start().await;
+    });
+    web::run_web(state).await;
 }
