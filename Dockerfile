@@ -8,6 +8,10 @@ COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
+RUN apk add --no-cache mold clang
+
+ENV RUSTFLAGS="-C linker=clang -C link-arg=-fuse-ld=mold"
+
 COPY --from=planner /skekbot-rs/recipe.json recipe.json
 
 RUN cargo chef cook --release --recipe-path recipe.json
@@ -20,14 +24,11 @@ WORKDIR /skekbot-rs
 
 COPY --from=builder /skekbot-rs/target/release/skekbot-rs /usr/local/bin
 
-# Install runtime deps (TLS + timezone)
 RUN apk add --no-cache ca-certificates tzdata && \
     update-ca-certificates
 
-# Create non-root user
 RUN addgroup -S skekbot && adduser -S skekbot -G skekbot
 
-# Use unprivileged user
 USER skekbot
 
 ENTRYPOINT [ "/usr/local/bin/skekbot-rs" ]
