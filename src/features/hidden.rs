@@ -2,13 +2,13 @@ use nlprule::{Tokenizer, tokenizer_filename};
 use phf::{phf_map, phf_set};
 use rand::RngExt;
 use regex::Regex;
-use serenity::all::{Context, CreateAllowedMentions, CreateMessage, EventHandler, Message, Ready};
+use serenity::all::{Context, CreateAllowedMentions, CreateMessage, EventHandler, Message, Ready, UserId};
 use serenity::async_trait;
 use std::sync::LazyLock;
 
 #[allow(clippy::unreadable_literal)]
 // this is a discord user id so its FINE.
-const HIDDEN_USER_ID: u64 = 475851244737396740;
+const HIDDEN_USER_ID: UserId = UserId::new(475851244737396740);
 
 static ALLOWED_ABBREVIATIONS: phf::Map<&'static str, &'static str> = phf_map! {
     "perms" => "permissions",
@@ -151,7 +151,7 @@ impl EventHandler for Handler {
         if msg.author.bot {
             return;
         }
-        if msg.author.id.get() != HIDDEN_USER_ID {
+        if msg.author.id != HIDDEN_USER_ID {
             return;
         }
 
