@@ -139,7 +139,7 @@ async fn announce(
             &ctx.http(),
             serenity::CreateInteractionResponse::Message(
                 CreateInteractionResponseMessage::new().content(format!(
-                    "{} chose {}.\n{} chose {}\n\n{}.",
+                    "{} chose {}.\n{} chose {}.\n\n{}",
                     user1,
                     user1_choice.as_str(),
                     user2,
