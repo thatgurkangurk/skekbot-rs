@@ -1,6 +1,6 @@
 [package]
 name = "skekbot-rs"
-version = "0.3.4"
+version = "0.4.1"
 edition = "2024"
 license = "MPL-2.0"
 repository = "https://github.com/thatgurkangurk/skekbot-rs"
