@@ -125,6 +125,7 @@ async fn main() {
             commands::ping::ping(),
             commands::dad::dad(),
             commands::rock_paper_scissors::rock_paper_scissors(),
+            commands::info::info(),
         ],
         event_handler: |ctx, event, framework, data| {
             Box::pin(event_handler_root(ctx, event, framework, data))

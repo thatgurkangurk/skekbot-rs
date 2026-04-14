@@ -3,6 +3,8 @@ name = "skekbot-rs"
 version = "0.3.4"
 edition = "2024"
 license = "MPL-2.0"
+repository = "https://github.com/thatgurkangurk/skekbot-rs"
+authors = ["gurkan", "Skekdog"]
 
 [dependencies]
 axum = "0.8.9"

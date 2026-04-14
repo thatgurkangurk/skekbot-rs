@@ -2,7 +2,9 @@ use nlprule::{Tokenizer, tokenizer_filename};
 use phf::{phf_map, phf_set};
 use rand::RngExt;
 use regex::Regex;
-use serenity::all::{Context, CreateAllowedMentions, CreateMessage, EventHandler, Message, Ready, UserId};
+use serenity::all::{
+    Context, CreateAllowedMentions, CreateMessage, EventHandler, Message, Ready, UserId,
+};
 use serenity::async_trait;
 use std::sync::LazyLock;
 
