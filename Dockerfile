@@ -17,6 +17,10 @@ COPY --from=planner /skekbot-rs/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY . .
+
+ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
+
 RUN cargo build --release --bin skekbot-rs
 
 FROM alpine:3.23 AS runtime

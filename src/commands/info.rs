@@ -6,7 +6,7 @@ use crate::{Context, Error};
 #[poise::command(slash_command)]
 /// get misc info about the bot
 pub async fn info(ctx: Context<'_>) -> Result<(), Error> {
-    let version = env!("CARGO_PKG_VERSION");
+    let version = option_env!("APP_VERSION").unwrap_or("local-dev");
     let authors = env!("CARGO_PKG_AUTHORS").replace(':', ", ");
     let repository = env!("CARGO_PKG_REPOSITORY");
 
