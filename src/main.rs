@@ -18,9 +18,7 @@ type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
 // Custom user data passed to all command functions
-pub struct Data {
-    bot_name: String,
-}
+pub struct Data {}
 
 impl TypeMapKey for Data {
     type Value = String;
@@ -138,9 +136,7 @@ async fn main() {
         .setup(move |ctx, _, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(Data {
-                    bot_name: "Super Hi Tech Ai".to_string(),
-                })
+                Ok(Data {})
             })
         })
         .options(options)

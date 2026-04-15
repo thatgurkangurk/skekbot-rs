@@ -64,7 +64,7 @@ fn get_dad_joke_name(content: &str) -> Option<String> {
     }
 }
 
-async fn dad_joke(ctx: &serenity::Context, message: &Message, data: &Data) -> Result<(), Error> {
+async fn dad_joke(ctx: &serenity::Context, message: &Message, _data: &Data) -> Result<(), Error> {
     if message.author.bot {
         return Ok(());
     }
@@ -76,7 +76,7 @@ async fn dad_joke(ctx: &serenity::Context, message: &Message, data: &Data) -> Re
     name = crate::util::sanitise_pings(&name);
 
     message
-        .reply(ctx, format!("Hi {}, I'm {}!", name, data.bot_name))
+        .reply(ctx, format!("Hi {}, I'm {}!", name, ctx.cache.current_user().display_name()))
         .await?;
 
     Ok(())
