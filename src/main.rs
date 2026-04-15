@@ -45,8 +45,8 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
 
 fn print_startup_info() {
     let lines = [
-        format!("skekbot-rs v{} by gurkan", env!("CARGO_PKG_VERSION")),
-        "MIT license".to_string(),
+        format!("skekbot-rs {} by gurkan", option_env!("APP_VERSION").unwrap_or("local-dev")),
+        "MPL 2.0 license".to_string(),
         "https://github.com/thatgurkangurk/skekbot-rs".to_string(),
     ];
 
