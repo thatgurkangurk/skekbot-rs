@@ -1,7 +1,17 @@
 use crate::{Context, Error};
-use ::serenity::all::CreateAttachment;
+use ::serenity::all::{CreateAttachment, User};
 use image::EncodableLayout;
 use poise::{CreateReply, serenity_prelude as serenity};
+
+#[inline]
+fn create_username(user: &User) -> String {
+    if user.discriminator.is_some() {
+        //? if they for SOME reason have an old username (most likely a bot)
+        user.tag()
+    } else {
+        format!("@{}", user.name)
+    }
+}
 
 #[poise::command(context_menu_command = "Quote")]
 pub async fn quote(
@@ -18,8 +28,8 @@ pub async fn quote(
     let image = match crate::features::quote::generate_quote_image(
         &avatar_url,
         &content,
-        user.display_name(),
-        &user.name,
+        &format!("- {}", user.display_name()),
+        &create_username(&user),
     )
     .await
     {
