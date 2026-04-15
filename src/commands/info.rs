@@ -1,22 +1,18 @@
 use poise::CreateReply;
 use serenity::all::{Colour, CreateEmbed, Timestamp};
 
-use crate::{Context, Error};
+use crate::{Context, Error, consts};
 
 #[poise::command(slash_command)]
 /// get misc info about the bot
 pub async fn info(ctx: Context<'_>) -> Result<(), Error> {
-    let version = option_env!("APP_VERSION").unwrap_or("local-dev");
-    let authors = env!("CARGO_PKG_AUTHORS").replace(':', ", ");
-    let repository = env!("CARGO_PKG_REPOSITORY");
-
     let bot_user = ctx.cache().current_user().clone();
 
     let embed = CreateEmbed::new()
         .title("skekbot-rs")
-        .field("version", version, true)
-        .field("authors", authors, true)
-        .field("repository", repository, false)
+        .field("version", consts::VERSION, true)
+        .field("authors", consts::AUTHORS_RAW.replace(':', ", "), true)
+        .field("repository", consts::REPOSITORY, false)
         .colour(Colour::from_rgb(236, 253, 245))
         .timestamp(Timestamp::now())
         .thumbnail(bot_user.face());

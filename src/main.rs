@@ -2,6 +2,7 @@ mod commands;
 mod event;
 mod features;
 mod util;
+mod consts;
 
 use ::serenity::prelude::TypeMapKey;
 use console::style;
@@ -45,9 +46,9 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
 
 fn print_startup_info() {
     let lines = [
-        format!("skekbot-rs {} by gurkan", option_env!("APP_VERSION").unwrap_or("local-dev")),
+        format!("skekbot-rs {} by gurkan", consts::VERSION),
         "MPL 2.0 license".to_string(),
-        "https://github.com/thatgurkangurk/skekbot-rs".to_string(),
+        consts::VERSION.to_string(),
     ];
 
     let content_width = lines
