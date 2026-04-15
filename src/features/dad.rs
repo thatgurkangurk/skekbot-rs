@@ -76,7 +76,14 @@ async fn dad_joke(ctx: &serenity::Context, message: &Message, _data: &Data) -> R
     name = crate::util::sanitise_pings(&name);
 
     message
-        .reply(ctx, format!("Hi {}, I'm {}!", name, ctx.cache.current_user().display_name()))
+        .reply(
+            ctx,
+            format!(
+                "Hi {}, I'm {}!",
+                name,
+                ctx.cache.current_user().display_name()
+            ),
+        )
         .await?;
 
     Ok(())

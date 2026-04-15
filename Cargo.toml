@@ -7,15 +7,18 @@ repository = "https://github.com/thatgurkangurk/skekbot-rs"
 authors = ["gurkan", "Skekdog"]
 
 [dependencies]
+ab_glyph = "0.2.32"
 axum = "0.8.9"
 console = "0.16.3"
 dotenvy = "0.15.7"
+image = "0.25.10"
+imageproc = "0.26.1"
 nlprule = "0.6.4"
 phf = { version = "0.13.1", features = ["macros"] }
 poise = "0.6.2"
 rand = "0.10.1"
 regex = "1.12.3"
-reqwest = { version = "0.13.2", features = ["json"] }
+reqwest = { version = "0.13.2", features = ["blocking", "json"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 serenity = "0.12.5"
