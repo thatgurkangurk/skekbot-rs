@@ -11,6 +11,7 @@ pub async fn event_handler_root(
 ) -> Result<(), Error> {
     event_handler(ctx, event, framework, data).await?;
     features::dad::event_handler(ctx, event, framework, data).await?;
+    features::hidden::event_handler(ctx, event, framework, data).await?;
     Ok(())
 }
 

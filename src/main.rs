@@ -1,8 +1,8 @@
 mod commands;
+mod consts;
 mod event;
 mod features;
 mod util;
-mod consts;
 
 use ::serenity::prelude::TypeMapKey;
 use console::style;
@@ -10,7 +10,6 @@ use poise::serenity_prelude as serenity;
 use std::env;
 
 use crate::event::event_handler_root;
-use crate::features::hidden;
 use crate::features::web::{self, BotState};
 use crate::util::validate_token;
 
@@ -149,7 +148,6 @@ async fn main() {
 
     let client = match serenity::ClientBuilder::new(token, intents)
         .framework(framework)
-        .event_handler(hidden::Handler)
         .await
     {
         Ok(c) => c,

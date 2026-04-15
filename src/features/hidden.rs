@@ -1,12 +1,12 @@
 use nlprule::{Tokenizer, tokenizer_filename};
 use phf::{phf_map, phf_set};
+use poise::serenity_prelude as serenity;
 use rand::RngExt;
 use regex::Regex;
-use serenity::all::{
-    Context, CreateAllowedMentions, CreateMessage, EventHandler, Message, Ready, UserId,
-};
-use serenity::async_trait;
+use serenity::all::{CreateAllowedMentions, CreateMessage, UserId};
 use std::sync::LazyLock;
+
+use crate::{Data, Error};
 
 #[allow(clippy::unreadable_literal)]
 // this is a discord user id so its FINE.
@@ -139,22 +139,24 @@ fn extract_nouns_with_correct_verb(text: &str) -> Option<String> {
     ))
 }
 
-pub struct Handler;
-
-#[async_trait]
-impl EventHandler for Handler {
-    async fn ready(&self, _: Context, _: Ready) {
+pub async fn event_handler(
+    ctx: &serenity::Context,
+    event: &serenity::FullEvent,
+    _framework: poise::FrameworkContext<'_, Data, Error>,
+    _data: &Data,
+) -> Result<(), Error> {
+    if let serenity::FullEvent::Ready { data_about_bot: _ } = event {
         println!("warming up the nlp engine...");
         let _ = NLP.pipe("warmup");
         println!("nlp engine loaded. ready to annoy hidden teehee.");
     }
 
-    async fn message(&self, ctx: Context, msg: Message) {
-        if msg.author.bot {
-            return;
+    if let serenity::FullEvent::Message { new_message } = event {
+        if new_message.author.bot {
+            return Ok(());
         }
-        if msg.author.id != HIDDEN_USER_ID {
-            return;
+        if new_message.author.id != HIDDEN_USER_ID {
+            return Ok(());
         }
 
         let should_reply = {
@@ -163,18 +165,18 @@ impl EventHandler for Handler {
         };
 
         if !should_reply {
-            return;
+            return Ok(());
         }
 
-        let content = &msg.content;
+        let content = &new_message.content;
         if content.len() < 3 {
-            return;
+            return Ok(());
         }
 
         let sanitised_content = MENTIONS_REGEX.replace_all(content, "").into_owned();
 
         let Some(noun) = extract_nouns_with_correct_verb(&sanitised_content) else {
-            return;
+            return Ok(());
         };
 
         let reply_content = format!("maybe the {noun} hidden");
@@ -182,12 +184,13 @@ impl EventHandler for Handler {
         let mentions_builder = CreateAllowedMentions::new().empty_roles().empty_roles();
         let message_builder = CreateMessage::new()
             .content(reply_content)
-            .reference_message(&msg)
+            .reference_message(new_message)
             .allowed_mentions(mentions_builder);
 
-        let _ = msg
+        let _ = new_message
             .channel_id
             .send_message(&ctx.http, message_builder)
             .await;
     }
+    Ok(())
 }

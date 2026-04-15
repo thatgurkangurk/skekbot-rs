@@ -2,66 +2,65 @@ use crate::{Data, Error};
 use ::serenity::all::Message;
 use poise::serenity_prelude as serenity;
 
-const IM: &[&str] = &["im", "i'm", "i’m"];
+const IM_TRIGGERS: &[&str] = &["im", "i'm", "i’m", "i am"];
+const DELIMITERS: &[char] = &['.', ',', '\n', '!', '?'];
 const MAX_LENGTH: usize = 75;
 
-fn dad<'a>(content: &'a str, im_trigger_words: &[&str]) -> Option<&'a str> {
+fn get_dad_joke_name(content: &str) -> Option<String> {
     let content = content.trim();
-    if content.is_empty() {
-        return None;
-    }
-
     let lower = content.to_lowercase();
+    let mut start_index: Option<usize> = None;
 
-    let words: Vec<&str> = content.split_whitespace().collect();
-    let lower_words: Vec<&str> = lower.split_whitespace().collect();
+    // Collect char indices to safely check lookbehind for word boundaries
+    let chars: Vec<(usize, char)> = lower.char_indices().collect();
 
-    if words.len() < 2 {
-        return None;
-    }
+    for (i, &(byte_idx, _)) in chars.iter().enumerate() {
+        let is_boundary = i == 0 || chars[i - 1].1.is_whitespace();
 
-    let mut trigger_index = None;
+        if is_boundary {
+            for trigger in IM_TRIGGERS {
+                if lower[byte_idx..].starts_with(trigger) {
+                    let after_byte_idx = byte_idx + trigger.len(); // trigger.len() is byte length
 
-    for i in 0..lower_words.len() {
-        if lower_words[i] == "i" && lower_words.get(i + 1) == Some(&"am") {
-            trigger_index = Some(i + 2);
-        } else if im_trigger_words.contains(&lower_words[i]) {
-            trigger_index = Some(i + 1);
-        }
-    }
+                    let is_end_boundary = after_byte_idx == lower.len()
+                        || lower[after_byte_idx..].starts_with(|c: char| c.is_whitespace());
 
-    let start_word = trigger_index?;
-    if start_word >= words.len() {
-        return None;
-    }
-
-    // FIND byte index by walking split_whitespace again
-    let mut current_word = 0;
-    let mut byte_start = None;
-
-    for (byte_index, _) in content.char_indices() {
-        if content[byte_index..].starts_with(words[start_word]) {
-            if current_word == start_word {
-                byte_start = Some(byte_index);
-                break;
+                    if is_end_boundary {
+                        start_index = Some(after_byte_idx);
+                    }
+                }
             }
-            current_word += 1;
         }
     }
 
-    let byte_start = byte_start?;
-    let remainder = &content[byte_start..];
+    let mut start_byte = start_index?;
 
-    let end = remainder
-        .find(['.', ',', '!', '?'])
-        .unwrap_or(remainder.len());
+    if let Some(offset) = content[start_byte..].find(|c: char| !c.is_whitespace()) {
+        start_byte += offset;
+    } else {
+        start_byte = content.len();
+    }
 
+    if start_byte >= content.len() {
+        return None;
+    }
+
+    let remainder = &content[start_byte..];
+
+    let end = remainder.find(DELIMITERS).unwrap_or(remainder.len());
     let result = remainder[..end].trim();
 
     if result.is_empty() {
+        return None;
+    }
+
+    let truncated: String = result.chars().take(MAX_LENGTH).collect();
+    let final_name = truncated.trim().to_string();
+
+    if final_name.is_empty() {
         None
     } else {
-        Some(result)
+        Some(final_name)
     }
 }
 
@@ -70,25 +69,9 @@ async fn dad_joke(ctx: &serenity::Context, message: &Message, data: &Data) -> Re
         return Ok(());
     }
 
-    let content = message.content.trim();
-    if content.is_empty() {
-        return Ok(());
-    }
-
-    let Some(name) = dad(content, IM) else {
+    let Some(mut name) = get_dad_joke_name(&message.content) else {
         return Ok(());
     };
-
-    let mut name = name
-        .chars()
-        .take(MAX_LENGTH)
-        .collect::<String>()
-        .trim()
-        .to_string();
-
-    if name.is_empty() {
-        return Ok(());
-    }
 
     name = crate::util::sanitise_pings(&name);
 
