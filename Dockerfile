@@ -33,8 +33,12 @@ COPY --from=builder /skekbot-rs/target/release/skekbot-rs /usr/local/bin
 RUN apk add --no-cache ca-certificates tzdata && \
     update-ca-certificates
 
-RUN addgroup -S skekbot && adduser -S skekbot -G skekbot
+ARG UID=1000
+ARG GID=1000
 
-USER skekbot
+RUN addgroup -g $GID -S skekbot && \
+    adduser -u $UID -S skekbot -G skekbot
+
+RUN mkdir -p /app/data && chown skekbot:skekbot /app/data
 
 ENTRYPOINT [ "/usr/local/bin/skekbot-rs" ]
