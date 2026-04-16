@@ -23,12 +23,12 @@ ENV APP_VERSION=$APP_VERSION
 
 ARG DATA_DIR="/app/data"
 
-RUN cargo build --release --bin skekbot-rs
+RUN cargo build --release --bin skekbot_rs
 
 FROM alpine:3.23 AS runtime
 WORKDIR /skekbot-rs
 
-COPY --from=builder /skekbot-rs/target/release/skekbot-rs /usr/local/bin
+COPY --from=builder /skekbot-rs/target/release/skekbot_rs /usr/local/bin
 
 RUN apk add --no-cache ca-certificates tzdata && \
     update-ca-certificates
@@ -41,4 +41,4 @@ RUN addgroup -g $GID -S skekbot && \
 
 RUN mkdir -p /app/data && chown skekbot:skekbot /app/data
 
-ENTRYPOINT [ "/usr/local/bin/skekbot-rs" ]
+ENTRYPOINT [ "/usr/local/bin/skekbot_rs" ]
