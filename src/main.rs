@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{env, path::Path};
 
 use console::style;
 use skekbot_rs::{Config, consts, features::web};
@@ -70,6 +70,8 @@ async fn main() -> anyhow::Result<()> {
 
     let default_path = Path::new(consts::DATA_DIR).join("skekbot.toml");
 
+    
+
     println!(
         "{} {}",
         style("➜").cyan().bold(),
@@ -82,6 +84,20 @@ async fn main() -> anyhow::Result<()> {
             style("⚠").yellow().bold(),
             style(format!("warning: {} does not exist!", default_path.display())).yellow()
         );
+
+        if std::env::var("CREATE_CONFIG_FILE_IF_NOT_EXIST").unwrap_or_default() == "1" {
+            println!(
+                "{} {}",
+                style("📝").cyan().bold(),
+                style(format!("creating empty config file at: {}", default_path.display())).cyan()
+            );
+
+            if let Some(parent) = default_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+
+            std::fs::write(&default_path, "")?;
+        }
     }
 
     let config = Config::load(Some(&default_path))?;
