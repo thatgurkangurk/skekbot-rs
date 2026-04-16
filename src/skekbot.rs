@@ -31,6 +31,7 @@ pub async fn create_skekbot(config: &Config, db: &DatabaseConnection) -> anyhow:
             commands::rock_paper_scissors::rock_paper_scissors(),
             commands::info::info(),
             commands::quote::quote(),
+            commands::config::refresh_config(),
         ],
         event_handler: |ctx, event, framework, data| {
             Box::pin(event_handler_root(ctx, event, framework, data))
