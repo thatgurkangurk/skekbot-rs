@@ -2,6 +2,7 @@ use crate::{Context, Error};
 use ::serenity::all::{CreateAttachment, User};
 use image::EncodableLayout;
 use poise::{CreateReply, serenity_prelude as serenity};
+use tracing::error;
 
 #[inline]
 fn create_username(user: &User) -> String {
@@ -35,7 +36,7 @@ pub async fn quote(
     {
         Ok(img) => img,
         Err(e) => {
-            eprintln!("Failed to generate quote image: {e:?}");
+            error!("Failed to generate quote image: {e:?}");
             ctx.say("uh oh something went wrong").await?;
             return Ok(());
         }

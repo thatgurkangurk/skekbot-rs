@@ -1,4 +1,5 @@
 use poise::serenity_prelude as serenity;
+use tracing::info;
 
 use crate::features;
 use crate::{Data, Error};
@@ -22,7 +23,7 @@ async fn event_handler(
     _data: &Data,
 ) -> Result<(), Error> {
     if let serenity::FullEvent::Ready { data_about_bot, .. } = event {
-        println!("Logged in as {}", data_about_bot.user.name);
+        info!("Logged in as {}", data_about_bot.user.name);
         let mut data = ctx.data.write().await;
 
         if let Some(name) = data.get_mut::<Data>() {

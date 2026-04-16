@@ -2,6 +2,7 @@ use crate::{Context, Error};
 use ::serenity::all::{CreateInteractionResponseMessage, EditMessage};
 use poise::{CreateReply, serenity_prelude as serenity};
 use rand::seq::IndexedRandom;
+use tracing::error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RockPaperScissorsOption {
@@ -124,10 +125,10 @@ async fn announce(
                     Ok(()) => {}
                     Err(serenity::Error::Http(error)) => {
                         let status = error.status_code().ok_or("Missing status code")?;
-                        println!("error: {status}");
+                        error!("error: {status}");
                     }
                     Err(e) => {
-                        println!("Other error: {e}");
+                        error!("Other error: {e}");
                     }
                 }
             }

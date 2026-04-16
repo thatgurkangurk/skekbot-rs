@@ -6,6 +6,7 @@ use rand::RngExt;
 use regex::Regex;
 use serenity::all::{CreateAllowedMentions, CreateMessage, UserId};
 use std::sync::LazyLock;
+use tracing::{error, info};
 
 use crate::{Data, Error};
 
@@ -147,9 +148,9 @@ pub async fn event_handler(
     _data: &Data,
 ) -> Result<(), Error> {
     if let serenity::FullEvent::Ready { data_about_bot: _ } = event {
-        println!("warming up the nlp engine...");
+        info!("warming up the nlp engine...");
         let _ = NLP.pipe("warmup");
-        println!("nlp engine loaded. ready to annoy hidden teehee.");
+        info!("nlp engine loaded. ready to annoy hidden teehee.");
     }
 
     if let serenity::FullEvent::Message { new_message } = event {
@@ -195,9 +196,9 @@ pub async fn event_handler(
                     .edit_member(&ctx.http, &HIDDEN_USER_ID, builder)
                     .await
                 {
-                    println!("Error timing out user: {why:?}");
+                    error!("Error timing out user: {why:?}");
                 } else {
-                    println!("User {HIDDEN_USER_ID} has been timed out.");
+                    info!("User {HIDDEN_USER_ID} has been timed out.");
                 }
             }
         }

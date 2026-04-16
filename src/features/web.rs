@@ -13,6 +13,7 @@ use serde_json::json;
 use serenity::all::{ChannelId, MessageId};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::{error, info};
 
 use utoipa::{
     Modify, OpenApi, ToSchema,
@@ -54,7 +55,7 @@ impl BotState {
         // We lock it internally; the caller never knows a Mutex even exists
         let mut lock = self.client.lock().await;
         if let Err(why) = lock.start().await {
-            eprintln!("Bot Error: {why:?}");
+            error!("Bot Error: {why:?}");
         }
     }
 }
@@ -173,14 +174,14 @@ pub async fn run_web(state: BotState) {
     let listener = match tokio::net::TcpListener::bind("0.0.0.0:3000").await {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("failed to bind tcp listener: {e}");
+            error!("failed to bind tcp listener: {e}");
             return;
         }
     };
 
-    println!("server running on http://localhost:3000/");
+    info!("server running on http://localhost:3000/");
 
     if let Err(e) = axum::serve(listener, web).await {
-        eprintln!("failed to start server: {e}");
+        error!("failed to start server: {e}");
     }
 }
