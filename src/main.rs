@@ -70,6 +70,20 @@ async fn main() -> anyhow::Result<()> {
 
     let default_path = Path::new(consts::DATA_DIR).join("skekbot.toml");
 
+    println!(
+        "{} {}",
+        style("➜").cyan().bold(),
+        style(format!("looking for config in: {}", default_path.display())).dim()
+    );
+
+    if !default_path.exists() {
+        println!(
+            "{} {}",
+            style("⚠").yellow().bold(),
+            style(format!("warning: {} does not exist!", default_path.display())).yellow()
+        );
+    }
+
     let config = Config::load(Some(&default_path))?;
 
     let skekbot = skekbot_rs::create_skekbot(&config).await?;
