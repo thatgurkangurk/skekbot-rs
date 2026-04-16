@@ -167,23 +167,6 @@ pub async fn event_handler(
         };
 
         if should_timeout {
-            let _hidden = if let Some(user_ref) = ctx.cache.users().get(&HIDDEN_USER_ID) {
-                user_ref.clone()
-            } else {
-                let mentions_builder = CreateAllowedMentions::new().replied_user(true);
-                let message_builder = CreateMessage::new()
-                    .content("you got lucky this time...")
-                    .reference_message(new_message)
-                    .allowed_mentions(mentions_builder);
-
-                let _ = new_message
-                    .channel_id
-                    .send_message(&ctx.http, message_builder)
-                    .await;
-
-                return Ok(());
-            };
-
             #[allow(clippy::expect_used)]
             let timeout_until =
                 Timestamp::from_unix_timestamp(Timestamp::now().unix_timestamp() + 300)
