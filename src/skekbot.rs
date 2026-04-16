@@ -1,6 +1,8 @@
 use crate::{Config, Data, Error, commands, event::event_handler_root, features::web::BotState};
+use moka::future::Cache;
 use poise::serenity_prelude as serenity;
 
+use sea_orm::DatabaseConnection;
 use tracing::error;
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -17,7 +19,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
-pub async fn create_skekbot(config: &Config) -> anyhow::Result<BotState> {
+pub async fn create_skekbot(config: &Config, db: &DatabaseConnection) -> anyhow::Result<BotState> {
     let intents = serenity::GatewayIntents::GUILDS
         | serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::MESSAGE_CONTENT;
@@ -38,6 +40,7 @@ pub async fn create_skekbot(config: &Config) -> anyhow::Result<BotState> {
     };
 
     let config_clone = config.clone();
+    let db_clone = db.clone();
 
     let framework = poise::Framework::builder()
         .setup(move |ctx, _ready, framework| {
@@ -45,6 +48,10 @@ pub async fn create_skekbot(config: &Config) -> anyhow::Result<BotState> {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {
                     config: config_clone,
+                    db: db_clone,
+                    server_cache: Cache::builder()
+                        .time_to_live(std::time::Duration::from_mins(5))
+                        .build(),
                 })
             })
         })

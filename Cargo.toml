@@ -15,6 +15,7 @@ config = { version = "0.15.22", default-features = false, features = ["toml"] }
 console = "0.16.3"
 image = "0.25.10"
 imageproc = "0.26.1"
+moka = { version = "0.12.15", features = ["future"] }
 nlprule = "0.6.4"
 phf = { version = "0.13.1", features = ["macros"] }
 poise = "0.6.2"
