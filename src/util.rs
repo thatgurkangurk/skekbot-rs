@@ -1,16 +1,17 @@
+use anyhow::anyhow;
+
+#[must_use]
 pub fn sanitise_pings(message: &str) -> String {
     message.replace('@', "@\u{200B}")
 }
 
-pub fn validate_token(token: Option<&str>) -> Result<&str, &str> {
+pub fn validate_token(token: Option<&str>) -> anyhow::Result<&str> {
     let Some(token) = token else {
-        return Err("no token was provided");
+        return Err(anyhow!("no token was provided"));
     };
 
-    let token = match serenity::utils::validate_token(token) {
-        Ok(()) => token,
-        Err(_) => return Err("an invalid token was provided"),
-    };
-
-    Ok(token)
+    match serenity::utils::validate_token(token) {
+        Ok(()) => Ok(token),
+        Err(_) => Err(anyhow!("an invalid token was provided")),
+    }
 }

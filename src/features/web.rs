@@ -22,6 +22,8 @@ use utoipa_scalar::{Scalar, Servable};
 
 use serenity::Client;
 
+use crate::Config;
+
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct MessageRequest {
@@ -32,19 +34,24 @@ struct MessageRequest {
 
 #[derive(Clone)]
 pub struct BotState {
-    pub client: Arc<Mutex<Client>>,
+    client: Arc<Mutex<Client>>,
     pub http: Arc<serenity::http::Http>,
+    pub config: Config,
 }
 
 impl BotState {
-    pub fn new(client: Client) -> Self {
+    #[must_use]
+    pub fn new(client: Client, config: &Config) -> Self {
+        let config_clone = config.clone();
         Self {
             http: client.http.clone(),
             client: Arc::new(Mutex::new(client)),
+            config: config_clone,
         }
     }
 
     pub async fn start(&self) {
+        // We lock it internally; the caller never knows a Mutex even exists
         let mut lock = self.client.lock().await;
         if let Err(why) = lock.start().await {
             eprintln!("Bot Error: {why:?}");
@@ -85,9 +92,7 @@ async fn send_message_handler(
     headers: HeaderMap,
     Json(body): Json<MessageRequest>,
 ) -> impl IntoResponse {
-    let Ok(password) = std::env::var("WEB_PASSWORD") else {
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Server misconfigured").into_response();
-    };
+    let password = state.config.web.password;
 
     let auth_header = headers
         .get(axum::http::header::AUTHORIZATION)

@@ -8,7 +8,9 @@ authors = ["gurkan", "Skekdog"]
 
 [dependencies]
 ab_glyph = "0.2.32"
+anyhow = "1.0.102"
 axum = "0.8.9"
+config = { version = "0.15.22", default-features = false, features = ["toml"] }
 console = "0.16.3"
 dotenvy = "0.15.7"
 image = "0.25.10"

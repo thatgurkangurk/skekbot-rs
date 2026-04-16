@@ -1,4 +1,4 @@
-use ::serenity::all::{CacheHttp, EditMember, Timestamp};
+use ::serenity::all::{EditMember, Timestamp};
 use nlprule::{Tokenizer, tokenizer_filename};
 use phf::{phf_map, phf_set};
 use poise::serenity_prelude as serenity;
@@ -184,10 +184,9 @@ pub async fn event_handler(
             };
 
             #[allow(clippy::expect_used)]
-            let timeout_until = Timestamp::from_unix_timestamp(
-                Timestamp::now().unix_timestamp() + 300,
-            )
-            .expect("Invalid timestamp");
+            let timeout_until =
+                Timestamp::from_unix_timestamp(Timestamp::now().unix_timestamp() + 300)
+                    .expect("Invalid timestamp");
 
             if let Some(guild_id) = new_message.guild_id {
                 let builder = EditMember::new().disable_communication_until_datetime(timeout_until);
