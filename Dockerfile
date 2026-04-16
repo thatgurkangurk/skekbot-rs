@@ -21,6 +21,8 @@ COPY . .
 ARG APP_VERSION
 ENV APP_VERSION=$APP_VERSION
 
+ARG DATA_PATH="/app/data"
+
 RUN cargo build --release --bin skekbot-rs
 
 FROM alpine:3.23 AS runtime
