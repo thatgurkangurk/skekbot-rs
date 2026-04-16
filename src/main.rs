@@ -1,4 +1,4 @@
-use std::{env, path::Path};
+use std::{path::Path};
 
 use console::style;
 use skekbot_rs::{Config, consts, features::web};
@@ -66,11 +66,7 @@ fn print_startup_info() {
 async fn main() -> anyhow::Result<()> {
     print_startup_info();
 
-    dotenvy::dotenv().ok();
-
     let default_path = Path::new(consts::DATA_DIR).join("skekbot.toml");
-
-    
 
     println!(
         "{} {}",

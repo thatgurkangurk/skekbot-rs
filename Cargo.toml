@@ -12,7 +12,6 @@ anyhow = "1.0.102"
 axum = "0.8.9"
 config = { version = "0.15.22", default-features = false, features = ["toml"] }
 console = "0.16.3"
-dotenvy = "0.15.7"
 image = "0.25.10"
 imageproc = "0.26.1"
 nlprule = "0.6.4"
