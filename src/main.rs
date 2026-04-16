@@ -1,4 +1,4 @@
-use std::{path::Path};
+use std::path::Path;
 
 use console::style;
 use skekbot_rs::{Config, consts, features::web};
@@ -78,14 +78,22 @@ async fn main() -> anyhow::Result<()> {
         println!(
             "{} {}",
             style("⚠").yellow().bold(),
-            style(format!("warning: {} does not exist!", default_path.display())).yellow()
+            style(format!(
+                "warning: {} does not exist!",
+                default_path.display()
+            ))
+            .yellow()
         );
 
         if std::env::var("CREATE_CONFIG_FILE_IF_NOT_EXIST").unwrap_or_default() == "1" {
             println!(
                 "{} {}",
                 style("📝").cyan().bold(),
-                style(format!("creating empty config file at: {}", default_path.display())).cyan()
+                style(format!(
+                    "creating empty config file at: {}",
+                    default_path.display()
+                ))
+                .cyan()
             );
 
             if let Some(parent) = default_path.parent() {
@@ -97,6 +105,8 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let config = Config::load(Some(&default_path))?;
+
+    let _db = skekbot_rs::db::create_db().await?;
 
     let skekbot = skekbot_rs::create_skekbot(&config).await?;
 
