@@ -70,15 +70,7 @@ async fn dad_joke(ctx: &serenity::Context, message: &Message, data: &Data) -> Re
     }
 
     if let Some(guild_id) = message.guild_id {
-        let num_id = guild_id.get();
-
-        let server_table = data
-            .server_cache
-            .try_get_with(num_id, async {
-                crate::db::get_or_create_server_table(&guild_id, &data.db).await
-            })
-            .await
-            .map_err(|e| anyhow::anyhow!("Cache/DB error: {e}"))?;
+        let server_table = crate::db::get_or_create_server_table_cached(&guild_id, &data.db, &data.server_cache).await?;
 
         if !server_table.dad_enabled {
             return Ok(());
