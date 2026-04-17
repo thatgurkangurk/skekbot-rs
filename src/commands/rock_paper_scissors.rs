@@ -20,6 +20,7 @@ impl RockPaperScissorsOption {
         }
     }
 
+    #[inline]
     fn as_emoji(self) -> serenity::ReactionType {
         match self {
             Self::Paper => serenity::ReactionType::Unicode("📄".to_string()),
