@@ -1,6 +1,4 @@
-# syntax=docker/dockerfile:1.7
-
-FROM lukemathwalker/cargo-chef:1.93.1-rust-alpine3.23 AS chef
+FROM lukemathwalker/cargo-chef:0.1.77-rust-1.93.1-alpine3.23 AS chef
 LABEL org.opencontainers.image.source="https://github.com/thatgurkangurk/skekbot-rs"
 
 WORKDIR /skekbot-rs
