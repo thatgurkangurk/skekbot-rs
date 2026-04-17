@@ -69,17 +69,19 @@ async fn dad_joke(ctx: &serenity::Context, message: &Message, data: &Data) -> Re
         return Ok(());
     }
 
+    let Some(mut name) = get_dad_joke_name(&message.content) else {
+        return Ok(());
+    };
+
     if let Some(guild_id) = message.guild_id {
-        let server_table = crate::db::get_or_create_server_table_cached(&guild_id, &data.db, &data.server_cache).await?;
+        let server_table =
+            crate::db::get_or_create_server_table_cached(&guild_id, &data.db, &data.server_cache)
+                .await?;
 
         if !server_table.dad_enabled {
             return Ok(());
         }
     }
-
-    let Some(mut name) = get_dad_joke_name(&message.content) else {
-        return Ok(());
-    };
 
     name = crate::util::sanitise_pings(&name);
 

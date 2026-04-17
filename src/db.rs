@@ -52,7 +52,7 @@ pub async fn get_or_create_server_table_cached(
 }
 
 /// immediately fetches the server table from the db
-/// 
+///
 /// for most purposes please use [`get_or_create_server_table_cached`] instead
 pub async fn get_or_create_server_table(
     guild_id: &GuildId,
@@ -83,7 +83,9 @@ pub async fn get_or_create_server_table(
     let server = server::Entity::find_by_id(num_guild_id)
         .one(db)
         .await?
-        .ok_or_else(|| anyhow::anyhow!("critical: server was not found immediately after upsert"))?;
+        .ok_or_else(|| {
+            anyhow::anyhow!("critical: server was not found immediately after upsert")
+        })?;
 
     Ok(server)
 }
