@@ -25,6 +25,8 @@ COPY . .
 ARG APP_VERSION
 ENV APP_VERSION=$APP_VERSION
 
+ARG DATA_DIR="/app/data"
+
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     cargo build --release --bin skekbot_rs && \
