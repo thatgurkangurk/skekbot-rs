@@ -102,15 +102,15 @@ async fn main() -> anyhow::Result<()> {
 
     let db = skekbot_rs::db::create_db().await?;
 
-    let skekbot = skekbot_rs::create_skekbot(&config, &db).await?;
-
-    let bot_state_for_discord = skekbot.clone();
+    let (mut discord_client, web_state) = skekbot_rs::create_skekbot(&config, &db).await?;
 
     tokio::spawn(async move {
-        bot_state_for_discord.start().await;
+        web::run_web(web_state).await;
     });
 
-    web::run_web(skekbot).await;
+    if let Err(why) = discord_client.start().await {
+        tracing::error!("Discord bot crashed: {:?}", why);
+    }
 
     Ok(())
 }

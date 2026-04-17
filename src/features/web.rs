@@ -5,14 +5,13 @@ use axum::{
     extract::State,
     http::HeaderMap,
     response::IntoResponse,
-    routing::{get, post},
+    routing::{get, post, put},
 };
 use reqwest::StatusCode;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
-use serenity::all::{ChannelId, MessageId};
+use serenity::all::{ActivityData, ActivityType, ChannelId, MessageId, ShardManager};
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tracing::{error, info};
 
 use utoipa::{
@@ -25,6 +24,28 @@ use serenity::Client;
 
 use crate::Config;
 
+#[derive(Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum ActivityTypeProxy {
+    Playing,
+    Streaming,
+    Listening,
+    Watching,
+    Competing,
+}
+
+impl From<ActivityTypeProxy> for ActivityType {
+    fn from(proxy: ActivityTypeProxy) -> Self {
+        match proxy {
+            ActivityTypeProxy::Playing => Self::Playing,
+            ActivityTypeProxy::Streaming => Self::Streaming,
+            ActivityTypeProxy::Listening => Self::Listening,
+            ActivityTypeProxy::Watching => Self::Watching,
+            ActivityTypeProxy::Competing => Self::Competing,
+        }
+    }
+}
+
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct MessageRequest {
@@ -33,29 +54,28 @@ struct MessageRequest {
     reply_to_id: Option<String>,
 }
 
+#[derive(Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+struct SetActivityRequest {
+    activity_type: ActivityTypeProxy,
+    text: String,
+}
+
 #[derive(Clone)]
 pub struct BotState {
-    client: Arc<Mutex<Client>>,
+    pub shard_manager: Arc<ShardManager>,
     pub http: Arc<serenity::http::Http>,
     pub config: Config,
 }
 
 impl BotState {
     #[must_use]
-    pub fn new(client: Client, config: &Config) -> Self {
+    pub fn new(client: &Client, config: &Config) -> Self {
         let config_clone = config.clone();
         Self {
+            shard_manager: client.shard_manager.clone(),
             http: client.http.clone(),
-            client: Arc::new(Mutex::new(client)),
             config: config_clone,
-        }
-    }
-
-    pub async fn start(&self) {
-        // We lock it internally; the caller never knows a Mutex even exists
-        let mut lock = self.client.lock().await;
-        if let Err(why) = lock.start().await {
-            error!("Bot Error: {why:?}");
         }
     }
 }
@@ -71,6 +91,61 @@ async fn health_check() -> impl IntoResponse {
     Json(json!({
         "status": "ok",
     }))
+}
+
+#[utoipa::path(
+    put,
+    path = "/activity",
+    request_body = SetActivityRequest,
+    responses(
+        (status = 200, description = "status set successfully"),
+        (status = 401, description = "unauthorized (missing token)"),
+        (status = 403, description = "forbidden (invalid token)"),
+        (status = 500, description = "internal server srror")
+    ),
+    security(
+        ("bearer_auth" = [])
+    )
+)]
+async fn set_activity_handler(
+    State(state): State<BotState>,
+    headers: HeaderMap,
+    Json(body): Json<SetActivityRequest>,
+) -> impl IntoResponse {
+    let expected_auth = format!("Bearer {}", state.config.web.password);
+    match headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|h| h.to_str().ok())
+    {
+        Some(token) if token == expected_auth => (),
+        Some(_) => return (StatusCode::FORBIDDEN, "Forbidden").into_response(),
+        None => return (StatusCode::UNAUTHORIZED, "Unauthorised").into_response(),
+    }
+
+    let activity_type: ActivityType = body.activity_type.into();
+    let activity = match activity_type {
+        ActivityType::Listening => ActivityData::listening(&body.text),
+        ActivityType::Watching => ActivityData::watching(&body.text),
+        ActivityType::Competing => ActivityData::competing(&body.text),
+        ActivityType::Custom => ActivityData::custom(&body.text),
+        ActivityType::Streaming => ActivityData::streaming(&body.text, "https://twitch.tv/discord")
+            .unwrap_or_else(|_| ActivityData::playing(&body.text)),
+        _ => ActivityData::playing(&body.text),
+    };
+
+    let messengers: Vec<_> = {
+        let runners = state.shard_manager.runners.lock().await;
+        runners
+            .values()
+            .map(|runner| runner.runner_tx.clone())
+            .collect()
+    };
+
+    for messenger in messengers {
+        messenger.set_activity(Some(activity.clone()));
+    }
+
+    (StatusCode::OK, "Status updated successfully!").into_response()
 }
 
 #[utoipa::path(
@@ -141,8 +216,8 @@ async fn send_message_handler(
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(health_check, send_message_handler),
-    components(schemas(MessageRequest)),
+    paths(health_check, send_message_handler, set_activity_handler),
+    components(schemas(MessageRequest, SetActivityRequest)),
     modifiers(&SecurityAddon)
 )]
 struct ApiDoc;
@@ -164,6 +239,7 @@ fn create_web(state: BotState) -> Router {
     Router::new()
         .route("/health", get(health_check))
         .route("/send-message", post(send_message_handler))
+        .route("/activity", put(set_activity_handler))
         .merge(Scalar::with_url("/docs", ApiDoc::openapi()))
         .with_state(state)
 }

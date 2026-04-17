@@ -2,6 +2,7 @@ use crate::{Config, Data, Error, commands, event::event_handler_root, features::
 use moka::future::Cache;
 use poise::serenity_prelude as serenity;
 
+use ::serenity::Client;
 use sea_orm::DatabaseConnection;
 use tracing::error;
 
@@ -19,7 +20,10 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
-pub async fn create_skekbot(config: &Config, db: &DatabaseConnection) -> anyhow::Result<BotState> {
+pub async fn create_skekbot(
+    config: &Config,
+    db: &DatabaseConnection,
+) -> anyhow::Result<(Client, BotState)> {
     let intents = serenity::GatewayIntents::GUILDS
         | serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::MESSAGE_CONTENT;
@@ -65,7 +69,7 @@ pub async fn create_skekbot(config: &Config, db: &DatabaseConnection) -> anyhow:
         .await
         .map_err(|e| anyhow::anyhow!("failed to create client: {e}"))?;
 
-    let bot_state = BotState::new(client, config);
+    let bot_state = BotState::new(&client, config);
 
-    Ok(bot_state)
+    Ok((client, bot_state))
 }
