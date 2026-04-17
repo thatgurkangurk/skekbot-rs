@@ -68,6 +68,12 @@ pub struct BotState {
     pub config: Config,
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct ApiResponse {
+    pub success: bool,
+    pub message: String,
+}
+
 impl BotState {
     #[must_use]
     pub fn new(client: &Client, config: &Config) -> Self {
@@ -98,10 +104,10 @@ async fn health_check() -> impl IntoResponse {
     path = "/activity",
     request_body = SetActivityRequest,
     responses(
-        (status = 200, description = "status set successfully"),
-        (status = 401, description = "unauthorized (missing token)"),
-        (status = 403, description = "forbidden (invalid token)"),
-        (status = 500, description = "internal server srror")
+        (status = 200, description = "status set successfully", body = ApiResponse),
+        (status = 401, description = "unauthorised (missing token)", body = ApiResponse),
+        (status = 403, description = "forbidden (invalid token)", body = ApiResponse),
+        (status = 500, description = "internal server error", body = ApiResponse)
     ),
     security(
         ("bearer_auth" = [])
@@ -118,8 +124,26 @@ async fn set_activity_handler(
         .and_then(|h| h.to_str().ok())
     {
         Some(token) if token == expected_auth => (),
-        Some(_) => return (StatusCode::FORBIDDEN, "Forbidden").into_response(),
-        None => return (StatusCode::UNAUTHORIZED, "Unauthorised").into_response(),
+        Some(_) => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse {
+                    success: false,
+                    message: "Forbidden".to_string(),
+                }),
+            )
+                .into_response();
+        }
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApiResponse {
+                    success: false,
+                    message: "Unauthorised".to_string(),
+                }),
+            )
+                .into_response();
+        }
     }
 
     let activity_type: ActivityType = body.activity_type.into();
@@ -145,7 +169,14 @@ async fn set_activity_handler(
         messenger.set_activity(Some(activity.clone()));
     }
 
-    (StatusCode::OK, "Status updated successfully!").into_response()
+    (
+        StatusCode::OK,
+        Json(ApiResponse {
+            success: true,
+            message: "Status updated successfully!".to_string(),
+        }),
+    )
+        .into_response()
 }
 
 #[utoipa::path(
@@ -153,11 +184,11 @@ async fn set_activity_handler(
     path = "/send-message",
     request_body = MessageRequest,
     responses(
-        (status = 200, description = "message sent successfully"),
-        (status = 400, description = "bad request (like invalid channel id)"),
-        (status = 401, description = "unauthorized (missing token)"),
-        (status = 403, description = "forbidden (invalid token)"),
-        (status = 500, description = "internal server srror")
+        (status = 200, description = "message sent successfully", body = ApiResponse),
+        (status = 400, description = "bad request (like invalid channel id)", body = ApiResponse),
+        (status = 401, description = "unauthorised (missing token)", body = ApiResponse),
+        (status = 403, description = "forbidden (invalid token)", body = ApiResponse),
+        (status = 500, description = "internal server error", body = ApiResponse)
     ),
     security(
         ("bearer_auth" = [])
@@ -176,13 +207,40 @@ async fn send_message_handler(
 
     match auth_header {
         Some(t) if t == format!("Bearer {password}") => (),
-        Some(_) => return (StatusCode::FORBIDDEN, "Forbidden").into_response(),
-        None => return (StatusCode::UNAUTHORIZED, "Unauthorised").into_response(),
+        Some(_) => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse {
+                    success: false,
+                    message: "Forbidden".to_string(),
+                }),
+            )
+                .into_response();
+        }
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApiResponse {
+                    success: false,
+                    message: "Unauthorised".to_string(),
+                }),
+            )
+                .into_response();
+        }
     }
 
     let channel_id: ChannelId = match body.channel_id.parse::<u64>() {
         Ok(id) => ChannelId::new(id),
-        Err(_) => return (StatusCode::BAD_REQUEST, "Invalid channel ID format").into_response(),
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse {
+                    success: false,
+                    message: "Invalid channel ID format".to_string(),
+                }),
+            )
+                .into_response();
+        }
     };
 
     let http = &state.http;
@@ -198,17 +256,34 @@ async fn send_message_handler(
                 )
                 .await
         } else {
-            return (StatusCode::BAD_REQUEST, "Invalid replyToId format").into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse {
+                    success: false,
+                    message: "Invalid replyToId format".to_string(),
+                }),
+            )
+                .into_response();
         }
     } else {
         channel_id.say(http, body.message).await
     };
 
     match result {
-        Ok(_) => (StatusCode::OK, "Success!").into_response(),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(ApiResponse {
+                success: true,
+                message: "Success!".to_string(),
+            }),
+        )
+            .into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Discord Error: {e}"),
+            Json(ApiResponse {
+                success: false,
+                message: format!("Discord Error: {e}"),
+            }),
         )
             .into_response(),
     }
@@ -217,7 +292,7 @@ async fn send_message_handler(
 #[derive(OpenApi)]
 #[openapi(
     paths(health_check, send_message_handler, set_activity_handler),
-    components(schemas(MessageRequest, SetActivityRequest)),
+    components(schemas(MessageRequest, SetActivityRequest, ApiResponse)),
     modifiers(&SecurityAddon)
 )]
 struct ApiDoc;
