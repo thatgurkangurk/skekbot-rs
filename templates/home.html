@@ -1,0 +1,38 @@
+<!doctype html>
+
+<html>
+  <head>
+    <title>Skekbot</title>
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/png" href="skekbot.png" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.jade.min.css"
+    />
+  </head>
+
+  <body>
+    <main class="container">
+      <form name="message-form" action="javascript:void(0);">
+        <fieldset>
+          <label for="password-input">password</label>
+          <input id="password-input" type="password" required />
+
+          <label for="message-box">message</label>
+          <textarea id="message-box" required></textarea>
+
+          <label for="channel-input">channel id</label>
+          <input id="channel-input" type="number" required />
+
+          <label for="reply-input">message id to reply to (optional)</label>
+          <input id="reply-input" type="number" />
+        </fieldset>
+
+        <button id="message-button" type="submit">Send!</button>
+      </form>
+    </main>
+
+    <script defer src="home.js"></script>
+  </body>
+</html>

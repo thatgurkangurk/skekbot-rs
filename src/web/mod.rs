@@ -4,14 +4,14 @@ mod routes;
 mod state;
 
 use axum::{
-    Json, Router,
-    response::IntoResponse,
-    routing::{get, post, put},
+    Json, Router, response::{Html, IntoResponse, Response}, routing::{get, post, put}
 };
+use reqwest::StatusCode;
+use tower_http::services::ServeDir;
 use serde::Serialize;
 use serde_json::json;
 use tracing::{error, info};
-
+use askama::Template;
 use utoipa::{
     Modify, OpenApi, ToSchema,
     openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
@@ -23,6 +23,36 @@ use routes::activity::{SetActivityRequest, set_activity_handler};
 use crate::web::routes::message::MessageRequest;
 
 pub use state::BotState;
+
+use rust_embed::RustEmbed;
+
+#[derive(RustEmbed, Clone)]
+#[folder = "assets/"] 
+struct Assets;
+
+#[derive(Debug, displaydoc::Display, thiserror::Error)]
+enum AppError {
+    /// could not render template
+    Render(#[from] askama::Error),
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        #[derive(Debug, Template)]
+        #[template(path = "error.html")]
+        struct Tmpl {}
+
+        let status = match &self {
+            AppError::Render(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        let tmpl = Tmpl {};
+        if let Ok(body) = tmpl.render() {
+            (status, Html(body)).into_response()
+        } else {
+            (status, "Something went wrong").into_response()
+        }
+    }
+}
 
 #[derive(Serialize, ToSchema)]
 pub struct ApiResponse {
@@ -65,14 +95,22 @@ impl Modify for SecurityAddon {
 }
 
 fn create_web(state: BotState) -> Router {
-    Router::new()
+    let router = Router::new()
+        .route("/", get(routes::home::home))
         .route("/health", get(health_check))
         .route("/send-message", post(routes::message::send_message_handler))
-        .route("/activity", put(set_activity_handler))
+        .route("/activity", put(set_activity_handler));
+
+    let router = if cfg!(debug_assertions) {
+        router.fallback_service(ServeDir::new("assets"))
+    } else {
+        router.fallback_service(axum_embed::ServeEmbed::<Assets>::new())
+    };
+
+    router
         .merge(Scalar::with_url("/docs", ApiDoc::openapi()))
         .with_state(state)
 }
-
 pub async fn run_web(state: BotState) {
     let web = create_web(state);
 
