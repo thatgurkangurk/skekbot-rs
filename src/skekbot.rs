@@ -1,4 +1,4 @@
-use crate::{Config, Data, Error, commands, event::event_handler_root, features::web::BotState};
+use crate::{Config, Data, Error, commands, event::event_handler_root, web::BotState};
 use moka::future::Cache;
 use poise::serenity_prelude as serenity;
 

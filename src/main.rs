@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use console::style;
-use skekbot_rs::{Config, consts, features::web};
+use skekbot_rs::{Config, consts, web};
 use tracing::{info, warn};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 

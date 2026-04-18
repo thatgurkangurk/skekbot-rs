@@ -7,6 +7,7 @@ pub mod features;
 pub mod models;
 mod skekbot;
 pub mod util;
+pub mod web;
 
 use moka::future::Cache;
 use poise::serenity_prelude as serenity;
