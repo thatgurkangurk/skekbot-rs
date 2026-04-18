@@ -3,15 +3,18 @@
 mod routes;
 mod state;
 
+use askama::Template;
 use axum::{
-    Json, Router, response::{Html, IntoResponse, Response}, routing::{get, post, put}
+    Json, Router,
+    http::Uri,
+    response::{Html, IntoResponse, Response},
+    routing::{get, post, put},
 };
-use reqwest::StatusCode;
-use tower_http::services::ServeDir;
+use reqwest::{StatusCode, header};
 use serde::Serialize;
 use serde_json::json;
+use tower_http::services::ServeDir;
 use tracing::{error, info};
-use askama::Template;
 use utoipa::{
     Modify, OpenApi, ToSchema,
     openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
@@ -27,7 +30,7 @@ pub use state::BotState;
 use rust_embed::RustEmbed;
 
 #[derive(RustEmbed, Clone)]
-#[folder = "assets/"] 
+#[folder = "assets/"]
 struct Assets;
 
 #[derive(Debug, displaydoc::Display, thiserror::Error)]
@@ -104,7 +107,7 @@ fn create_web(state: BotState) -> Router {
     let router = if cfg!(debug_assertions) {
         router.fallback_service(ServeDir::new("assets"))
     } else {
-        router.fallback_service(axum_embed::ServeEmbed::<Assets>::new())
+        router.fallback(static_handler)
     };
 
     router
@@ -126,5 +129,18 @@ pub async fn run_web(state: BotState) {
 
     if let Err(e) = axum::serve(listener, web).await {
         error!("failed to start server: {e}");
+    }
+}
+
+async fn static_handler(uri: Uri) -> impl IntoResponse {
+    let path = uri.path().trim_start_matches('/');
+    let path = if path.is_empty() { "index.html" } else { path };
+
+    match Assets::get(path) {
+        Some(content) => {
+            let mime = mime_guess::from_path(path).first_or_octet_stream();
+            ([(header::CONTENT_TYPE, mime.as_ref())], content.data).into_response()
+        }
+        None => StatusCode::NOT_FOUND.into_response(),
     }
 }

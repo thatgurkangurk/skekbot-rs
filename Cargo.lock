@@ -4737,6 +4737,7 @@ dependencies = [
  "displaydoc",
  "image",
  "imageproc",
+ "mime_guess",
  "moka",
  "nlprule",
  "nlprule-build",
