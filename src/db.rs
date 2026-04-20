@@ -3,7 +3,7 @@ use crate::models::server;
 use moka::future::Cache;
 use sea_orm::sea_query::OnConflict;
 use sea_orm::sea_query::prelude::rust_decimal::prelude::ToPrimitive;
-use sea_orm::{Database, DatabaseConnection, EntityTrait, Set};
+use sea_orm::{Database, DatabaseConnection, DbErr, EntityTrait, Set};
 use serenity::all::GuildId;
 use std::fs;
 use std::path::Path;
@@ -71,14 +71,19 @@ pub async fn get_or_create_server_table(
         ..Default::default()
     };
 
-    server::Entity::insert(new_server)
+    let insert_result = server::Entity::insert(new_server)
         .on_conflict(
             OnConflict::column(server::Column::Id)
                 .do_nothing()
                 .to_owned(),
         )
         .exec(db)
-        .await?;
+        .await;
+
+    match insert_result {
+        Ok(_) | Err(DbErr::RecordNotInserted) => {} // either success, great :3! or a conflict, thats fine, ignore it
+        Err(e) => return Err(e.into()), // db error happened, bubble it
+    }
 
     let server = server::Entity::find_by_id(num_guild_id)
         .one(db)
