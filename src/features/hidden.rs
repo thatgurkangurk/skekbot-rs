@@ -161,30 +161,30 @@ pub async fn event_handler(
             return Ok(());
         }
 
-        let should_timeout = {
-            let mut rng = rand::rng();
-            rng.random_bool(0.45)
-        };
+        // let should_timeout = {
+        //     let mut rng = rand::rng();
+        //     rng.random_bool(0.45)
+        // };
 
-        if should_timeout {
-            #[allow(clippy::expect_used)]
-            let timeout_until =
-                Timestamp::from_unix_timestamp(Timestamp::now().unix_timestamp() + 300)
-                    .expect("Invalid timestamp");
+        // if should_timeout {
+        //     #[allow(clippy::expect_used)]
+        //     let timeout_until =
+        //         Timestamp::from_unix_timestamp(Timestamp::now().unix_timestamp() + 300)
+        //             .expect("Invalid timestamp");
 
-            if let Some(guild_id) = new_message.guild_id {
-                let builder = EditMember::new().disable_communication_until_datetime(timeout_until);
+        //     if let Some(guild_id) = new_message.guild_id {
+        //         let builder = EditMember::new().disable_communication_until_datetime(timeout_until);
 
-                if let Err(why) = guild_id
-                    .edit_member(&ctx.http, &HIDDEN_USER_ID, builder)
-                    .await
-                {
-                    error!("Error timing out user: {why:?}");
-                } else {
-                    info!("User {HIDDEN_USER_ID} has been timed out.");
-                }
-            }
-        }
+        //         if let Err(why) = guild_id
+        //             .edit_member(&ctx.http, &HIDDEN_USER_ID, builder)
+        //             .await
+        //         {
+        //             error!("Error timing out user: {why:?}");
+        //         } else {
+        //             info!("User {HIDDEN_USER_ID} has been timed out.");
+        //         }
+        //     }
+        // }
 
         let should_reply = {
             let mut rng = rand::rng();
