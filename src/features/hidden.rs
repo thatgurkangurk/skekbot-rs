@@ -145,7 +145,7 @@ pub async fn event_handler(
     ctx: &serenity::Context,
     event: &serenity::FullEvent,
     _framework: poise::FrameworkContext<'_, Data, Error>,
-    _data: &Data,
+    data: &Data,
 ) -> Result<(), Error> {
     if let serenity::FullEvent::Ready { data_about_bot: _ } = event {
         info!("warming up the nlp engine...");
@@ -159,6 +159,19 @@ pub async fn event_handler(
         }
         if new_message.author.id != HIDDEN_USER_ID {
             return Ok(());
+        }
+
+        if let Some(guild_id) = new_message.guild_id {
+            let server_table = crate::db::get_or_create_server_table_cached(&guild_id, &data.db, &data.server_cache).await?;
+
+            let should_reply = {
+                let mut rng = rand::rng();
+                rng.random_bool(server_table.hidden_chance)
+            }
+
+            if !should_reply {
+                return Ok(());
+            }
         }
 
         // let should_timeout = {
@@ -185,15 +198,6 @@ pub async fn event_handler(
         //         }
         //     }
         // }
-
-        let should_reply = {
-            let mut rng = rand::rng();
-            rng.random_bool(0.1)
-        };
-
-        if !should_reply {
-            return Ok(());
-        }
 
         let content = &new_message.content;
         if content.len() < 3 {

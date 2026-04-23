@@ -9,6 +9,9 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: i64,
 
+    #[sea_orm(default_value = 0.25)]
+    pub hidden_chance: f32,
+
     #[sea_orm(default_value = true)]
     pub dad_enabled: bool,
 }
