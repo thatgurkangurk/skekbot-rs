@@ -3,7 +3,7 @@
 use sea_orm::prelude::*;
 
 #[sea_orm::model]
-#[derive(Clone, Debug, Eq, PartialEq, DeriveEntityModel)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "server")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
