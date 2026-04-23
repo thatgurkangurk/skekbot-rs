@@ -188,7 +188,7 @@ pub async fn event_handler(
 
         let should_reply = {
             let mut rng = rand::rng();
-            rng.random_bool(0.5)
+            rng.random_bool(0.7)
         };
 
         if !should_reply {
