@@ -10,7 +10,7 @@ pub struct Model {
     pub id: i64,
 
     #[sea_orm(default_value = 0.25)]
-    pub hidden_chance: f32,
+    pub hidden_chance: f64,
 
     #[sea_orm(default_value = true)]
     pub dad_enabled: bool,
