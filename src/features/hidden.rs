@@ -167,7 +167,7 @@ pub async fn event_handler(
             let should_reply = {
                 let mut rng = rand::rng();
                 rng.random_bool(server_table.hidden_chance)
-            }
+            };
 
             if !should_reply {
                 return Ok(());
