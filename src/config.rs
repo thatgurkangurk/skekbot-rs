@@ -37,9 +37,15 @@ pub struct WebConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct DbConfig {
+    pub uri: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub bot: BotConfig,
     pub web: WebConfig,
+    pub db: Option<DbConfig>,
 }
 
 impl Config {

@@ -1,3 +1,4 @@
+use crate::Config;
 use crate::consts::DATA_DIR;
 use crate::models::server;
 use moka::future::Cache;
@@ -9,7 +10,7 @@ use std::fs;
 use std::path::Path;
 use tracing::warn;
 
-pub async fn create_db() -> anyhow::Result<DatabaseConnection> {
+async fn create_db_sqlite() -> anyhow::Result<DatabaseConnection> {
     let db_path = Path::new(DATA_DIR).join("skekbot.sqlite3");
 
     let db_path_str = db_path.to_string_lossy();
@@ -28,6 +29,25 @@ pub async fn create_db() -> anyhow::Result<DatabaseConnection> {
     }
 
     let db = Database::connect(&db_url).await?;
+
+    Ok(db)
+}
+
+async fn create_db_external(config: &Config) -> anyhow::Result<DatabaseConnection> {
+    if let Some(db_config) = &config.db {
+        let db = Database::connect(&db_config.uri).await?;
+
+        return Ok(db);
+    }
+
+    anyhow::bail!("no db connection config was provided");
+}
+
+pub async fn create_db(config: &Config) -> anyhow::Result<DatabaseConnection> {
+    let db = match config.db {
+        Some(_) => create_db_external(config).await?,
+        None => create_db_sqlite().await?,
+    };
 
     db.get_schema_registry("skekbot_rs::models::*")
         .sync(&db)
@@ -82,7 +102,7 @@ pub async fn get_or_create_server_table(
 
     match insert_result {
         Ok(_) | Err(DbErr::RecordNotInserted) => {} // either success, great :3! or a conflict, thats fine, ignore it
-        Err(e) => return Err(e.into()), // db error happened, bubble it
+        Err(e) => return Err(e.into()),             // db error happened, bubble it
     }
 
     let server = server::Entity::find_by_id(num_guild_id)

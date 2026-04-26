@@ -100,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
 
     let config = Config::load(Some(&default_path))?;
 
-    let db = skekbot_rs::db::create_db().await?;
+    let db = skekbot_rs::db::create_db(&config).await?;
 
     let (mut discord_client, web_state) = skekbot_rs::create_skekbot(&config, &db).await?;
 
