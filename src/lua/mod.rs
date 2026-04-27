@@ -1,22 +1,21 @@
 mod event_handler;
+mod modules;
 mod signal;
 
-use crate::{consts, server};
+use crate::{server};
 use anyhow::{Context, Result};
-use mlua::{Lua, LuaSerdeExt, RegistryKey};
+use mlua::{Lua, RegistryKey};
 use moka::future::Cache;
 use sea_orm::DatabaseConnection;
-use serenity::all::{ChannelId, GuildId, Http};
+use serenity::all::{Http};
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex as StdMutex};
 
 use crate::Data;
 use crate::consts::DATA_DIR;
-use crate::db::get_or_create_server_table_cached;
-use crate::lua::signal::create_signal;
 
 static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -76,14 +75,13 @@ pub fn load_scripts(lua: &Lua, directory: impl AsRef<Path>) -> Result<()> {
 }
 
 // i dont care for now
-#[allow(clippy::too_many_lines)]
 pub fn configure_lua_env(
     lua: &Lua,
     callbacks: &Arc<StdMutex<BotCallbacks>>,
     http: &Arc<Http>,
     server_cache: &Cache<u64, server::Model>,
-    db: &DatabaseConnection,
-    modules_path: &PathBuf,
+    db_conn: &DatabaseConnection,
+    modules_path: &Path,
 ) -> anyhow::Result<()> {
     let globals = lua.globals();
 
@@ -94,149 +92,13 @@ pub fn configure_lua_env(
     let loaded = lua.create_table()?;
 
     // ==========================================
-    // @skekbot/log & override print
+    // register virtual modules
     // ==========================================
-    let log_backend =
-        lua.create_function(|_, (level, location, message): (String, String, String)| {
-            match level.to_uppercase().as_str() {
-                "ERROR" => tracing::error!("({}) {}", location, message),
-                "WARN" => tracing::warn!("({}) {}", location, message),
-                _ => tracing::info!("({}) {}", location, message),
-            }
-            Ok(())
-        })?;
-
-    let log_module: mlua::Table = lua
-        .load(
-            r##"
-        local log_backend = ...
-        local function get_caller_info(stack_level)
-            local source, line = debug.info(stack_level, "sl")
-            if not source then return "unknown" end
-            
-            -- Strip [string "name"] wrapper
-            local clean_name = string.match(source, '^%[string "(.-)"%]$')
-            if clean_name then
-                source = clean_name
-            end
-            
-            if string.sub(source, 1, 1) == "=" or string.sub(source, 1, 1) == "@" then
-                source = string.sub(source, 2)
-            end
-            return source .. ":" .. tostring(line)
-        end
-
-        print = function(...)
-            local num_args = select("#", ...)
-            local str = {}
-            for i = 1, num_args do
-                table.insert(str, tostring(select(i, ...)))
-            end
-            log_backend("INFO", get_caller_info(3), table.concat(str, "\t"))
-        end
-
-        return {
-            log = function(level, message)
-                log_backend(level, get_caller_info(3), tostring(message))
-            end
-        }
-        "##,
-        )
-        .call(log_backend)?;
-
-    registry.set("@skekbot/log", log_module)?;
-
-    // ==========================================
-    // @skekbot/utils
-    // ==========================================
-    let utils_table = lua.create_table()?;
-
-    let start_time = std::time::Instant::now();
-    let uptime_helper = lua.create_function(move |_, ()| Ok(start_time.elapsed().as_secs()))?;
-    utils_table.set("getUptime", uptime_helper)?;
-
-    let sleep_helper = lua.create_async_function(|_, seconds: f64| async move {
-        tokio::time::sleep(std::time::Duration::from_secs_f64(seconds)).await;
-        Ok(())
-    })?;
-    utils_table.set("sleep", sleep_helper)?;
-
-    registry.set("@skekbot/utils", utils_table)?;
-
-    // ==========================================
-    // @skekbot/db
-    // ==========================================
-    let db_table = lua.create_table()?;
-    let db_clone = db.clone();
-    let cache_clone = server_cache.clone();
-
-    let get_settings = lua.create_async_function(move |lua, server_id: String| {
-        let db = db_clone.clone();
-        let cache = cache_clone.clone();
-
-        async move {
-            let guild_id_u64 = server_id.parse::<u64>().map_err(|_| {
-                mlua::Error::RuntimeError("Invalid Server ID: Must be a numeric string".to_string())
-            })?;
-
-            let guild_id = GuildId::new(guild_id_u64);
-
-            let model = get_or_create_server_table_cached(&guild_id, &db, &cache)
-                .await
-                .map_err(|e| mlua::Error::RuntimeError(format!("Database Error: {e}")))?;
-
-            let lua_value = lua.to_value(&model)?;
-            Ok(lua_value)
-        }
-    })?;
-
-    db_table.set("getOrCreateServerSettings", get_settings)?;
-    registry.set("@skekbot/db", db_table)?;
-
-    // ==========================================
-    // @skekbot/events
-    // ==========================================
-    let events_table = lua.create_table()?;
-    events_table.set(
-        "OnReady",
-        create_signal(lua, &Arc::clone(callbacks), EventType::Ready)?,
-    )?;
-    events_table.set(
-        "OnMessageCreate",
-        create_signal(lua, &Arc::clone(callbacks), EventType::MessageCreate)?,
-    )?;
-
-    registry.set("@skekbot/events", events_table)?;
-
-    // ==========================================
-    // @skekbot/rest
-    // ==========================================
-    let rest_table = lua.create_table()?;
-    let http_clone = Arc::clone(http);
-
-    let send_message =
-        lua.create_async_function(move |_, (channel_id_str, content): (String, String)| {
-            let http = Arc::clone(&http_clone);
-            async move {
-                let channel_id_u64 = channel_id_str.parse::<u64>().map_err(|_| {
-                    mlua::Error::RuntimeError(
-                        "invalid channel id: must be a numeric string".to_string(),
-                    )
-                })?;
-
-                let channel_id = ChannelId::new(channel_id_u64);
-                let message_builder = serenity::builder::CreateMessage::new().content(content);
-
-                channel_id
-                    .send_message(&http, message_builder)
-                    .await
-                    .map_err(|e| mlua::Error::RuntimeError(format!("discord api error: {e}")))?;
-                Ok(())
-            }
-        })?;
-
-    rest_table.set("sendMessage", send_message)?;
-    registry.set("@skekbot/rest", rest_table)?;
+    modules::log::setup(lua, &registry)?;
+    modules::utils::setup(lua, &registry)?;
+    modules::db::setup(lua, &registry, db_conn, server_cache)?;
+    modules::events::setup(lua, &registry, callbacks)?;
+    modules::rest::setup(lua, &registry, http)?;
 
     // store in named registry to prevent sandboxing from wiping them
     lua.set_named_registry_value("__SKEKBOT_REGISTRY", registry)?;
@@ -247,7 +109,7 @@ pub fn configure_lua_env(
     // ==========================================
     let base_dir = modules_path
         .canonicalize()
-        .unwrap_or_else(|_| modules_path.clone());
+        .unwrap_or_else(|_| modules_path.to_path_buf());
 
     let require_fn = lua.create_function(move |lua, path: String| {
         // virtual modules (@skekbot/*)
@@ -272,8 +134,12 @@ pub fn configure_lua_env(
         // lua module path resolution (handle both dots and direct paths)
         let is_direct_path = path.contains('/')
             || path.contains('\\')
-            || path.ends_with(".luau")
-            || path.ends_with(".lua");
+            || std::path::Path::new(&path)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("luau"))
+            || std::path::Path::new(&path)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("lua"));
 
         let target_path = if is_direct_path {
             base_dir.join(&path)
@@ -302,17 +168,13 @@ pub fn configure_lua_env(
             }
         }
 
-        let resolved_target = match found_path {
-            Some(p) => p,
-            None => {
-                return Err(mlua::Error::RuntimeError(format!(
-                    "module '{path}' not found"
-                )));
-            }
+        let Some(resolved_target) = found_path else {
+            return Err(mlua::Error::RuntimeError(format!(
+                "module '{path}' not found"
+            )));
         };
 
         // file sandboxing
-        // canonicalise evaluates symlinks, `..`, and `.`. if the file doesn't exist, it errors here
         let resolved_path = resolved_target.canonicalize().map_err(|e| {
             mlua::Error::RuntimeError(format!("cannot resolve module '{path}': {e}"))
         })?;
@@ -328,11 +190,9 @@ pub fn configure_lua_env(
         let file_content = std::fs::read_to_string(&resolved_path)
             .map_err(|e| mlua::Error::RuntimeError(format!("cannot open file '{path}': {e}")))?;
 
-        // prepend "@" to the path string here!
-        let mut result: mlua::Value = lua
-            .load(&file_content)
-            .set_name(format!("@{path}"))
-            .call(())?;
+        // prepend @ to the path so Luau formats errors as proper files, not [string]
+        let chunk_name = format!("@{path}");
+        let mut result: mlua::Value = lua.load(&file_content).set_name(chunk_name).call(())?;
 
         if result.is_nil() {
             result = mlua::Value::Boolean(true);
