@@ -1,9 +1,12 @@
 mod event_handler;
 mod signal;
 
+use crate::server;
 use anyhow::{Context, Result};
-use mlua::{Lua, RegistryKey};
-use serenity::all::Http;
+use mlua::{Lua, LuaSerdeExt, RegistryKey};
+use moka::future::Cache;
+use sea_orm::DatabaseConnection;
+use serenity::all::{GuildId, Http};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -12,6 +15,7 @@ use std::sync::{Arc, Mutex as StdMutex};
 
 use crate::Data;
 use crate::consts::DATA_DIR;
+use crate::db::get_or_create_server_table_cached;
 use crate::lua::signal::create_signal;
 
 static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
@@ -75,6 +79,8 @@ pub fn configure_lua_env(
     lua: &Lua,
     callbacks: &Arc<StdMutex<BotCallbacks>>,
     http: &Arc<Http>,
+    server_cache: &Cache<u64, server::Model>,
+    db: &DatabaseConnection,
 ) -> anyhow::Result<()> {
     let globals = lua.globals();
     let skekbot = lua.create_table()?;
@@ -99,6 +105,36 @@ pub fn configure_lua_env(
         Ok(())
     })?;
     skekbot.set("sleep", sleep_helper)?;
+
+    let db_table = lua.create_table()?;
+
+    let db_clone = db.clone();
+    let cache_clone = server_cache.clone();
+
+    let get_settings = lua.create_async_function(move |lua, server_id: String| {
+        let db = db_clone.clone();
+        let cache = cache_clone.clone();
+
+        async move {
+            let guild_id_u64 = server_id.parse::<u64>().map_err(|_| {
+                mlua::Error::RuntimeError("Invalid Server ID: Must be a numeric string".to_string())
+            })?;
+
+            let guild_id = GuildId::new(guild_id_u64);
+
+            let model = get_or_create_server_table_cached(&guild_id, &db, &cache)
+                .await
+                .map_err(|e| mlua::Error::RuntimeError(format!("Database Error: {e}")))?;
+
+            let lua_value = lua.to_value(&model)?;
+
+            Ok(lua_value)
+        }
+    })?;
+
+    db_table.set("getOrCreateServerSettings", get_settings)?;
+
+    skekbot.set("Db", db_table)?;
 
     let events = lua.create_table()?;
     events.set(
@@ -186,7 +222,13 @@ pub async fn reload_scripts(data: &Data, http: Arc<serenity::all::Http>) -> anyh
 
     let lua = data.lua.lock().await;
 
-    configure_lua_env(&lua, &Arc::clone(&data.lua_callbacks), &http)?;
+    configure_lua_env(
+        &lua,
+        &Arc::clone(&data.lua_callbacks),
+        &http,
+        &data.server_cache,
+        &data.db,
+    )?;
 
     let scripts_path = std::path::Path::new(DATA_DIR).join("luau").join("scripts");
     load_scripts(&lua, scripts_path)?;

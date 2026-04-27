@@ -65,6 +65,10 @@ pub async fn create_skekbot(
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
+                let server_cache = Cache::builder()
+                    .time_to_live(std::time::Duration::from_mins(5))
+                    .build();
+
                 tracing::info!("initialising luau...");
                 let lua = Arc::new(TokioMutex::new(Lua::new()));
                 let lua_callbacks = Arc::new(StdMutex::new(BotCallbacks::default()));
@@ -75,6 +79,8 @@ pub async fn create_skekbot(
                         &lua_lock,
                         &Arc::clone(&lua_callbacks),
                         &Arc::clone(&ctx.http),
+                        &server_cache,
+                        &db_clone,
                     )
                     .context("failed to configure the luau global environment")?;
 
@@ -87,9 +93,7 @@ pub async fn create_skekbot(
                 Ok(Data {
                     config: config_clone,
                     db: db_clone,
-                    server_cache: Cache::builder()
-                        .time_to_live(std::time::Duration::from_mins(5))
-                        .build(),
+                    server_cache,
 
                     lua,
                     lua_callbacks,

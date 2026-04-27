@@ -13,6 +13,13 @@ export type Message = {
     content: string,
     author: string,
     channel_id: string,
+    guild_id: string?
+}
+
+export type ServerSettings = {
+    id: string,
+    hidden_chance: number,
+    dad_enabled: boolean
 }
 
 export type Skekbot = {
@@ -23,6 +30,10 @@ export type Skekbot = {
 
     Rest: {
         sendMessage: (channel_id: string, content: string) -> (),
+    },
+
+    Db: {
+        getOrCreateServerSettings: (guild_id: string) -> ServerSettings
     },
 
     log: (level: string, message: string) -> (),
