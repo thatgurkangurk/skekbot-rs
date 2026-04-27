@@ -6,38 +6,43 @@ use crate::lua::{BotCallbacks, EventType, NEXT_CONNECTION_ID};
 
 pub fn create_signal(
     lua: &Lua,
-    callbacks: Arc<Mutex<BotCallbacks>>,
+    callbacks: &Arc<Mutex<BotCallbacks>>,
     event_type: EventType,
 ) -> mlua::Result<mlua::Table> {
     let signal = lua.create_table()?;
 
-    let callbacks_clone = Arc::clone(&callbacks);
+    let callbacks_clone = Arc::clone(callbacks);
 
-    // the rust signature is (Value, Function) because `obj:Connect(func)`
-    // secretly passes `obj` as the first argument. we ignore it with `_`.
     let connect = lua.create_function(move |lua, (_, func): (mlua::Value, Function)| {
         let key = lua.create_registry_value(func)?;
         let id = NEXT_CONNECTION_ID.fetch_add(1, Ordering::Relaxed);
 
-        // insert the event into our map
-        let mut cb = callbacks_clone.lock().unwrap();
-        match event_type {
-            EventType::Ready => {
-                cb.ready_events.insert(id, key);
-            }
-            EventType::MessageCreate => {
-                cb.message_create_events.insert(id, key);
-            }
-        }
-        drop(cb); // drop the lock quickly
+        // safe lock handling for callbacks
+        {
+            let mut cb = callbacks_clone.lock().map_err(|_| {
+                mlua::Error::RuntimeError("BotCallbacks mutex poisoned during Connect".to_string())
+            })?;
 
-        // create the object to return to lua
+            match event_type {
+                EventType::Ready => {
+                    cb.ready_events.insert(id, key);
+                }
+                EventType::MessageCreate => {
+                    cb.message_create_events.insert(id, key);
+                }
+            }
+        } // lock drops here
+
         let connection = lua.create_table()?;
         let callbacks_disconnect = Arc::clone(&callbacks_clone);
 
-        // the signature is Value because `connection:Disconnect()` passes `connection`
         let disconnect = lua.create_function(move |_, _: mlua::Value| {
-            let mut cb = callbacks_disconnect.lock().unwrap();
+            let mut cb = callbacks_disconnect.lock().map_err(|_| {
+                mlua::Error::RuntimeError(
+                    "BotCallbacks mutex poisoned during Disconnect".to_string(),
+                )
+            })?;
+
             match event_type {
                 EventType::Ready => {
                     cb.ready_events.remove(&id);
@@ -46,6 +51,8 @@ pub fn create_signal(
                     cb.message_create_events.remove(&id);
                 }
             }
+
+            drop(cb);
             Ok(())
         })?;
 

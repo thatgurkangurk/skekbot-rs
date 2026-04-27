@@ -71,8 +71,12 @@ pub async fn create_skekbot(
 
                 {
                     let lua_lock = lua.lock().await;
-                    configure_lua_env(&lua_lock, Arc::clone(&lua_callbacks), Arc::clone(&ctx.http))
-                        .context("failed to configure the luau global environment")?;
+                    configure_lua_env(
+                        &lua_lock,
+                        &Arc::clone(&lua_callbacks),
+                        &Arc::clone(&ctx.http),
+                    )
+                    .context("failed to configure the luau global environment")?;
 
                     let scripts_path = Path::new(DATA_DIR).join("luau").join("scripts");
 

@@ -73,8 +73,8 @@ pub fn load_scripts(lua: &Lua, directory: impl AsRef<Path>) -> Result<()> {
 
 pub fn configure_lua_env(
     lua: &Lua,
-    callbacks: Arc<StdMutex<BotCallbacks>>,
-    http: Arc<Http>,
+    callbacks: &Arc<StdMutex<BotCallbacks>>,
+    http: &Arc<Http>,
 ) -> anyhow::Result<()> {
     let globals = lua.globals();
     let skekbot = lua.create_table()?;
@@ -103,16 +103,16 @@ pub fn configure_lua_env(
     let events = lua.create_table()?;
     events.set(
         "OnReady",
-        create_signal(lua, Arc::clone(&callbacks), EventType::Ready)?,
+        create_signal(lua, &Arc::clone(callbacks), EventType::Ready)?,
     )?;
     events.set(
         "OnMessageCreate",
-        create_signal(lua, Arc::clone(&callbacks), EventType::MessageCreate)?,
+        create_signal(lua, &Arc::clone(callbacks), EventType::MessageCreate)?,
     )?;
     skekbot.set("Events", events)?;
 
     let rest = lua.create_table()?;
-    let http_clone = Arc::clone(&http);
+    let http_clone = Arc::clone(http);
 
     let send_message =
         lua.create_async_function(move |_, (channel_id_str, content): (String, String)| {
@@ -186,7 +186,7 @@ pub async fn reload_scripts(data: &Data, http: Arc<serenity::all::Http>) -> anyh
 
     let lua = data.lua.lock().await;
 
-    configure_lua_env(&lua, Arc::clone(&data.lua_callbacks), http)?;
+    configure_lua_env(&lua, &Arc::clone(&data.lua_callbacks), &http)?;
 
     let scripts_path = std::path::Path::new(DATA_DIR).join("luau").join("scripts");
     load_scripts(&lua, scripts_path)?;

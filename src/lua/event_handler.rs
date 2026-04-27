@@ -6,6 +6,7 @@ use poise::serenity_prelude as serenity;
 
 use crate::{Data, Error};
 
+#[allow(clippy::significant_drop_tightening)]
 pub async fn lua_event_handler(
     _ctx: &serenity::Context,
     event: &serenity::FullEvent,
@@ -17,7 +18,11 @@ pub async fn lua_event_handler(
             let lua = data.lua.lock().await;
 
             let funcs: Vec<Function> = {
-                let cb = data.lua_callbacks.lock().unwrap();
+                let cb = data
+                    .lua_callbacks
+                    .lock()
+                    .map_err(|_| anyhow::anyhow!("lua callbacks mutex poisoned"))?;
+
                 cb.ready_events
                     .values()
                     .filter_map(|key| lua.registry_value::<Function>(key).ok())
@@ -39,22 +44,29 @@ pub async fn lua_event_handler(
                 return Ok(());
             }
 
-            let lua = data.lua.lock().await;
+            let (funcs, lua_msg) = {
+                let lua = data.lua.lock().await;
 
-            let funcs: Vec<Function> = {
-                let cb = data.lua_callbacks.lock().unwrap();
-                cb.message_create_events
-                    .values()
-                    .filter_map(|key| lua.registry_value::<Function>(key).ok())
-                    .collect()
+                let func = {
+                    let cb = data
+                        .lua_callbacks
+                        .lock()
+                        .map_err(|_| anyhow::anyhow!("lua callbacks mutex poisoned"))?;
+                    cb.message_create_events
+                        .values()
+                        .filter_map(|key| lua.registry_value::<Function>(key).ok())
+                        .collect::<Vec<_>>()
+                };
+
+                let msg = lua
+                    .create_table()
+                    .map_err(|e| anyhow::anyhow!("Lua error: {e}"))?;
+                let _ = msg.set("content", new_message.content.clone());
+                let _ = msg.set("author", new_message.author.name.clone());
+                let _ = msg.set("channel_id", new_message.channel_id.get().to_string());
+
+                (func, msg)
             };
-
-            let lua_msg = lua
-                .create_table()
-                .unwrap_or_else(|_| lua.create_table().unwrap());
-            let _ = lua_msg.set("content", new_message.content.clone());
-            let _ = lua_msg.set("author", new_message.author.name.clone());
-            let _ = lua_msg.set("channel_id", new_message.channel_id.get().to_string());
 
             for func in funcs {
                 let exec_future = func.call_async::<()>(lua_msg.clone());
@@ -64,7 +76,6 @@ pub async fn lua_event_handler(
             }
         }
 
-        // ignore all other events
         _ => {}
     }
 
