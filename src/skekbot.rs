@@ -1,7 +1,4 @@
-use std::{
-    path::Path,
-    sync::{Arc},
-};
+use std::{path::Path, sync::Arc};
 
 use crate::{
     Config, Data, Error, commands,
@@ -11,7 +8,7 @@ use crate::{
     web::BotState,
 };
 use anyhow::Context;
-use mlua::{Lua};
+use mlua::Lua;
 use moka::future::Cache;
 use poise::serenity_prelude as serenity;
 
@@ -51,6 +48,7 @@ pub async fn create_skekbot(
             commands::info::info(),
             commands::quote::quote(),
             commands::config::refresh_config(),
+            commands::luau::reload(),
         ],
         event_handler: |ctx, event, framework, data| {
             Box::pin(event_handler_root(ctx, event, framework, data))

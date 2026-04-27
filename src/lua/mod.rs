@@ -10,6 +10,8 @@ use std::path::Path;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex as StdMutex};
 
+use crate::Data;
+use crate::consts::DATA_DIR;
 use crate::lua::signal::create_signal;
 
 static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
@@ -165,6 +167,31 @@ pub fn configure_lua_env(
     "##,
     )
     .exec()?;
+
+    Ok(())
+}
+
+pub async fn reload_scripts(data: &Data, http: Arc<serenity::all::Http>) -> anyhow::Result<()> {
+    tracing::info!("reloading luau scripts...");
+
+    {
+        let mut callbacks = data
+            .lua_callbacks
+            .lock()
+            .map_err(|_| anyhow::anyhow!("lua callbacks mutex is poisoned"))?;
+
+        callbacks.ready_events.clear();
+        callbacks.message_create_events.clear();
+    } // lock drops here
+
+    let lua = data.lua.lock().await;
+
+    configure_lua_env(&lua, Arc::clone(&data.lua_callbacks), http)?;
+
+    let scripts_path = std::path::Path::new(DATA_DIR).join("luau").join("scripts");
+    load_scripts(&lua, scripts_path)?;
+
+    tracing::info!("luau reload complete!");
 
     Ok(())
 }
