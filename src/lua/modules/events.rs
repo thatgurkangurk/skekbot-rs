@@ -1,24 +1,34 @@
-use mlua::{Lua, Table};
+use mlua::Lua;
 use std::sync::{Arc, Mutex as StdMutex};
 
+use crate::lua::builder::ModuleBuilder;
 use crate::lua::{BotCallbacks, EventType, signal::create_signal};
 
-pub fn setup(
-    lua: &Lua,
-    registry: &Table,
-    callbacks: &Arc<StdMutex<BotCallbacks>>,
-) -> anyhow::Result<()> {
-    let events_table = lua.create_table()?;
+pub fn setup(lua: &Lua, callbacks: &Arc<StdMutex<BotCallbacks>>) -> anyhow::Result<ModuleBuilder> {
+    let mut builder = ModuleBuilder::new(lua, "Events")?;
 
-    events_table.set(
+    builder
+        .add_type_declaration("export type Connection = { Disconnect: (self: Connection) -> () }");
+
+    builder.add_type_declaration(
+        "export type Signal<T> = { Connect: (self: Signal<T>, callback: (T) -> ()) -> () }",
+    );
+
+    builder.add_type_declaration(
+        "export type Message = { content: string, author: string, channel_id: string, guild_id: string? }"
+    );
+
+    builder.add_value(
         "OnReady",
+        "Signal<string>",
         create_signal(lua, &Arc::clone(callbacks), EventType::Ready)?,
     )?;
-    events_table.set(
+
+    builder.add_value(
         "OnMessageCreate",
+        "Signal<Message>",
         create_signal(lua, &Arc::clone(callbacks), EventType::MessageCreate)?,
     )?;
 
-    registry.set("@skekbot/events", events_table)?;
-    Ok(())
+    Ok(builder)
 }

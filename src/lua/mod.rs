@@ -1,5 +1,6 @@
+mod builder;
 mod event_handler;
-mod modules;
+pub mod modules;
 mod signal;
 
 use crate::server;
@@ -9,10 +10,10 @@ use moka::future::Cache;
 use sea_orm::DatabaseConnection;
 use serenity::all::Http;
 use std::collections::HashMap;
-use std::fs;
 use std::path::Path;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex as StdMutex};
+use std::{env, fs};
 
 use crate::Data;
 use crate::consts::DATA_DIR;
@@ -75,6 +76,7 @@ pub fn load_scripts(lua: &Lua, directory: impl AsRef<Path>) -> Result<()> {
 }
 
 // i dont care for now
+#[allow(clippy::too_many_lines)]
 pub fn configure_lua_env(
     lua: &Lua,
     callbacks: &Arc<StdMutex<BotCallbacks>>,
@@ -94,11 +96,32 @@ pub fn configure_lua_env(
     // ==========================================
     // register virtual modules
     // ==========================================
-    modules::log::setup(lua, &registry)?;
-    modules::utils::setup(lua, &registry)?;
-    modules::db::setup(lua, &registry, db_conn, server_cache)?;
-    modules::events::setup(lua, &registry, callbacks)?;
-    modules::rest::setup(lua, &registry, http)?;
+    let utils_mod = modules::utils::setup(lua, &registry)?;
+    let rest_mod = modules::rest::setup(lua, http)?;
+    let log_mod = modules::log::setup(lua)?;
+    let db_mod = modules::db::setup(lua, db_conn, server_cache)?;
+    let events_mod = modules::events::setup(lua, callbacks)?;
+
+    utils_mod.register(&registry)?;
+    rest_mod.register(&registry)?;
+    log_mod.register(&registry)?;
+    db_mod.register(&registry)?;
+    events_mod.register(&registry)?;
+
+    let types_dir = std::path::PathBuf::from("./types/skekbot");
+    if !types_dir.exists() {
+        std::fs::create_dir_all(&types_dir)?;
+    }
+
+    let is_generate_types = env::args().nth(1).as_deref() == Some("generate-types");
+
+    if is_generate_types {
+        log_mod.emit_type_file(&types_dir)?;
+        utils_mod.emit_type_file(&types_dir)?;
+        db_mod.emit_type_file(&types_dir)?;
+        events_mod.emit_type_file(&types_dir)?;
+        rest_mod.emit_type_file(&types_dir)?;
+    }
 
     // store in named registry to prevent sandboxing from wiping them
     lua.set_named_registry_value("__SKEKBOT_REGISTRY", registry)?;
@@ -195,7 +218,9 @@ pub fn configure_lua_env(
         let result: mlua::Value = lua.load(&file_content).set_name(chunk_name).call(())?;
 
         if result.is_nil() {
-            return Err(mlua::Error::RuntimeError(format!("the module at '{path}' is empty")));
+            return Err(mlua::Error::RuntimeError(format!(
+                "the module at '{path}' is empty"
+            )));
         }
 
         loaded.set(path.as_str(), result.clone())?;

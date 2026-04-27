@@ -1,6 +1,8 @@
 use mlua::{Lua, Table, Value};
 use std::{collections::HashSet, time::Instant};
 
+use crate::lua::builder::ModuleBuilder;
+
 fn stringify_value(
     value: &Value,
     visited: &mut HashSet<usize>,
@@ -58,26 +60,26 @@ fn stringify_value(
     }
 }
 
-pub fn setup(lua: &Lua, registry: &Table) -> anyhow::Result<()> {
-    let utils_table = lua.create_table()?;
+pub fn setup(lua: &Lua, registry: &Table) -> anyhow::Result<ModuleBuilder> {
+    let mut builder = ModuleBuilder::new(lua, "Utils")?;
 
-    let start_time = Instant::now();
-    let uptime_helper = lua.create_function(move |_, ()| Ok(start_time.elapsed().as_secs()))?;
-    utils_table.set("getUptime", uptime_helper)?;
-
-    let sleep_helper = lua.create_async_function(|_, seconds: f64| async move {
-        tokio::time::sleep(std::time::Duration::from_secs_f64(seconds)).await;
-        Ok(())
+    let start_time = std::time::Instant::now();
+    builder.add_function(lua, "getUptime", "() -> number", move |_, ()| {
+        Ok(start_time.elapsed().as_secs())
     })?;
-    utils_table.set("sleep", sleep_helper)?;
 
-    let stringify = lua.create_function(|_, value: Value| {
-        let mut visited = HashSet::new();
-        let result = stringify_value(&value, &mut visited, 0)?;
-        Ok(result)
-    })?;
-    utils_table.set("stringify", stringify)?;
+    builder.add_function(
+        lua,
+        "stringify",
+        "(value: {}) -> string",
+        move |_, value: Value| {
+            let mut visited = HashSet::new();
+            let result = stringify_value(&value, &mut visited, 0)?;
+            Ok(result)
+        },
+    )?;
 
-    registry.set("@skekbot/utils", utils_table)?;
-    Ok(())
+    builder.register(registry)?;
+
+    Ok(builder)
 }

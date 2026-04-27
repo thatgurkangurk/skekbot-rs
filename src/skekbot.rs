@@ -40,6 +40,43 @@ pub async fn create_skekbot(
         | serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::MESSAGE_CONTENT;
 
+    // ==========================================
+    // initialise luau early (pre-framework)
+    // ==========================================
+    let server_cache = Cache::builder()
+        .time_to_live(std::time::Duration::from_secs(300)) // 5 mins
+        .build();
+
+    tracing::info!("initialising luau...");
+    let lua = Arc::new(TokioMutex::new(Lua::new()));
+    let lua_callbacks = Arc::new(StdMutex::new(BotCallbacks::default()));
+
+    {
+        let lua_lock = lua.lock().await;
+
+        // we need a dummy/temporary Http client because we aren't in poise yet
+        let temp_http = Arc::new(serenity::all::Http::new(config.bot.token.as_ref()));
+
+        configure_lua_env(
+            &lua_lock,
+            &Arc::clone(&lua_callbacks),
+            &temp_http, // use temp http here for type generation
+            &server_cache,
+            db,
+            &Path::new(DATA_DIR).join("luau").join("modules"),
+        )
+        .context("failed to configure the luau global environment")?;
+
+        let scripts_path = Path::new(DATA_DIR).join("luau").join("scripts");
+        load_scripts(&lua_lock, &scripts_path).context("failed to load luau scripts")?;
+    }
+
+    let config_clone = config.clone();
+    let db_clone = db.clone();
+    let lua_clone = Arc::clone(&lua);
+    let callbacks_clone = Arc::clone(&lua_callbacks);
+    let cache_clone = server_cache.clone();
+
     let options = poise::FrameworkOptions {
         commands: vec![
             commands::ping::ping(),
@@ -57,47 +94,22 @@ pub async fn create_skekbot(
         ..Default::default()
     };
 
-    let config_clone = config.clone();
-    let db_clone = db.clone();
-
     let framework = poise::Framework::builder()
         .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-
-                let server_cache = Cache::builder()
-                    .time_to_live(std::time::Duration::from_mins(5))
-                    .build();
-
-                tracing::info!("initialising luau...");
-                let lua = Arc::new(TokioMutex::new(Lua::new()));
-                let lua_callbacks = Arc::new(StdMutex::new(BotCallbacks::default()));
-
                 {
-                    let lua_lock = lua.lock().await;
-                    configure_lua_env(
-                        &lua_lock,
-                        &Arc::clone(&lua_callbacks),
-                        &Arc::clone(&ctx.http),
-                        &server_cache,
-                        &db_clone,
-                        &Path::new(DATA_DIR).join("luau").join("modules"),
-                    )
-                    .context("failed to configure the luau global environment")?;
-
-                    let scripts_path = Path::new(DATA_DIR).join("luau").join("scripts");
-
-                    load_scripts(&lua_lock, &scripts_path)
-                        .context("failed to load luau scripts")?;
+                    let lua_lock = lua_clone.lock().await;
+                    let rest_mod = crate::lua::modules::rest::setup(&lua_lock, &ctx.http)?;
+                    rest_mod.register(&lua_lock.named_registry_value("__SKEKBOT_REGISTRY")?)?;
                 }
 
                 Ok(Data {
                     config: config_clone,
                     db: db_clone,
-                    server_cache,
-
-                    lua,
-                    lua_callbacks,
+                    server_cache: cache_clone,
+                    lua: lua_clone,
+                    lua_callbacks: callbacks_clone,
                 })
             })
         })

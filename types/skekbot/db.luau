@@ -1,11 +1,13 @@
-export type ServerSettings = {
-    id: string,
-    hidden_chance: number,
-    dad_enabled: boolean
-}
+
+        export type ServerSettings = {
+            guild_id: string,
+            prefix: string,
+            logging_channel: string?,
+        }
+    
 
 export type DbModule = {
-    getOrCreateServerSettings: (guild_id: string) -> ServerSettings
+    getOrCreateServerSettings: (server_id: string) -> ServerSettings,
 }
 
 return {} :: DbModule

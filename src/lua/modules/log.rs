@@ -1,6 +1,9 @@
-use mlua::{Lua, Table};
+use crate::lua::builder::ModuleBuilder;
+use mlua::{Function, Lua, Table};
 
-pub fn setup(lua: &Lua, registry: &Table) -> anyhow::Result<()> {
+pub fn setup(lua: &Lua) -> anyhow::Result<ModuleBuilder> {
+    let mut builder = ModuleBuilder::new(lua, "Log")?;
+
     let log_backend =
         lua.create_function(|_, (level, location, message): (String, String, String)| {
             match level.to_uppercase().as_str() {
@@ -11,7 +14,7 @@ pub fn setup(lua: &Lua, registry: &Table) -> anyhow::Result<()> {
             Ok(())
         })?;
 
-    let log_module: Table = lua
+    let log_table: Table = lua
         .load(
             r##"
         local log_backend = ...
@@ -49,6 +52,9 @@ pub fn setup(lua: &Lua, registry: &Table) -> anyhow::Result<()> {
         )
         .call(log_backend)?;
 
-    registry.set("@skekbot/log", log_module)?;
-    Ok(())
+    // Extract the generated log function and bind it to our builder
+    let log_func: Function = log_table.get("log")?;
+    builder.add_value("log", "(level: string, message: string) -> ()", log_func)?;
+
+    Ok(builder)
 }
