@@ -36,23 +36,24 @@ pub fn create_signal(
         let connection = lua.create_table()?;
         let callbacks_disconnect = Arc::clone(&callbacks_clone);
 
-        let disconnect = lua.create_function(move |_, _: mlua::Value| {
-            let mut cb = callbacks_disconnect.lock().map_err(|_| {
-                mlua::Error::RuntimeError(
-                    "BotCallbacks mutex poisoned during Disconnect".to_string(),
-                )
-            })?;
+        let disconnect = lua.create_function(move |lua, _: mlua::Value| {
+            let key_to_remove = {
+                let mut cb = callbacks_disconnect.lock().map_err(|_| {
+                    mlua::Error::RuntimeError(
+                        "BotCallbacks mutex poisoned during Disconnect".to_string(),
+                    )
+                })?;
 
-            match event_type {
-                EventType::Ready => {
-                    cb.ready_events.remove(&id);
+                match event_type {
+                    EventType::Ready => cb.ready_events.remove(&id),
+                    EventType::MessageCreate => cb.message_create_events.remove(&id),
                 }
-                EventType::MessageCreate => {
-                    cb.message_create_events.remove(&id);
-                }
+            };
+
+            if let Some(key) = key_to_remove {
+                lua.remove_registry_value(key)?;
             }
 
-            drop(cb);
             Ok(())
         })?;
 

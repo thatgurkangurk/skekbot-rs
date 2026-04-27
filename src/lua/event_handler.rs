@@ -64,7 +64,10 @@ pub async fn lua_event_handler(
                 let _ = msg.set("content", new_message.content.clone());
                 let _ = msg.set("author", new_message.author.name.clone());
                 let _ = msg.set("channel_id", new_message.channel_id.get().to_string());
-                let _ = msg.set("guild_id", new_message.guild_id.map(|id| id.get().to_string()));
+                let _ = msg.set(
+                    "guild_id",
+                    new_message.guild_id.map(|id| id.get().to_string()),
+                );
 
                 (func, msg)
             };
