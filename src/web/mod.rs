@@ -46,7 +46,7 @@ impl IntoResponse for AppError {
         struct Tmpl {}
 
         let status = match &self {
-            AppError::Render(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Render(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let tmpl = Tmpl {};
         if let Ok(body) = tmpl.render() {
