@@ -60,7 +60,7 @@ fn stringify_value(
     }
 }
 
-pub fn setup(lua: &Lua, registry: &Table) -> anyhow::Result<ModuleBuilder> {
+pub fn setup(lua: &Lua) -> anyhow::Result<ModuleBuilder> {
     let mut builder = ModuleBuilder::new(lua, "Utils")?;
 
     let start_time = std::time::Instant::now();
@@ -78,8 +78,6 @@ pub fn setup(lua: &Lua, registry: &Table) -> anyhow::Result<ModuleBuilder> {
             Ok(result)
         },
     )?;
-
-    builder.register(registry)?;
 
     Ok(builder)
 }

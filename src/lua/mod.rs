@@ -96,31 +96,39 @@ pub fn configure_lua_env(
     // ==========================================
     // register virtual modules
     // ==========================================
-    let utils_mod = modules::utils::setup(lua, &registry)?;
-    let rest_mod = modules::rest::setup(lua, http)?;
-    let log_mod = modules::log::setup(lua)?;
-    let db_mod = modules::db::setup(lua, db_conn, server_cache)?;
-    let events_mod = modules::events::setup(lua, callbacks)?;
+    let builders = vec![
+        modules::utils::setup(lua)?,
+        modules::rest::setup(lua, http)?,
+        modules::log::setup(lua)?,
+        modules::db::setup(lua, db_conn, server_cache)?,
+        modules::events::setup(lua, callbacks)?,
+    ];
 
-    utils_mod.register(&registry)?;
-    rest_mod.register(&registry)?;
-    log_mod.register(&registry)?;
-    db_mod.register(&registry)?;
-    events_mod.register(&registry)?;
+    for builder in &builders {
+        builder.register(&registry)?;
+    }
 
     let types_dir = std::path::PathBuf::from("./types/skekbot");
     if !types_dir.exists() {
         std::fs::create_dir_all(&types_dir)?;
     }
 
-    let is_generate_types = env::args().nth(1).as_deref() == Some("generate-types");
+    let is_generate_cmd = env::args().nth(1).as_deref() == Some("generate-types");
+    let is_debug_mode = cfg!(debug_assertions);
 
-    if is_generate_types {
-        log_mod.emit_type_file(&types_dir)?;
-        utils_mod.emit_type_file(&types_dir)?;
-        db_mod.emit_type_file(&types_dir)?;
-        events_mod.emit_type_file(&types_dir)?;
-        rest_mod.emit_type_file(&types_dir)?;
+    if is_generate_cmd || is_debug_mode {
+        let types_dir = std::path::PathBuf::from("./types/skekbot");
+        if !types_dir.exists() {
+            std::fs::create_dir_all(&types_dir)?;
+        }
+
+        for builder in &builders {
+            builder.emit_type_file(&types_dir)?;
+        }
+
+        if is_generate_cmd {
+            tracing::info!("type generation complete. exiting...");
+        }
     }
 
     // store in named registry to prevent sandboxing from wiping them
