@@ -1,9 +1,24 @@
-use crate::{Config, Data, Error, commands, event::event_handler_root, web::BotState};
+use std::{
+    path::Path,
+    sync::{Arc},
+};
+
+use crate::{
+    Config, Data, Error, commands,
+    consts::DATA_DIR,
+    event::event_handler_root,
+    lua::{BotCallbacks, configure_lua_env, load_scripts},
+    web::BotState,
+};
+use anyhow::Context;
+use mlua::{Lua};
 use moka::future::Cache;
 use poise::serenity_prelude as serenity;
 
+use crate::StdMutex;
 use ::serenity::Client;
 use sea_orm::DatabaseConnection;
+use tokio::sync::Mutex as TokioMutex;
 use tracing::error;
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
@@ -51,19 +66,37 @@ pub async fn create_skekbot(
         .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+
+                tracing::info!("initialising luau...");
+                let lua = Arc::new(TokioMutex::new(Lua::new()));
+                let lua_callbacks = Arc::new(StdMutex::new(BotCallbacks::default()));
+
+                {
+                    let lua_lock = lua.lock().await;
+                    configure_lua_env(&lua_lock, Arc::clone(&lua_callbacks), Arc::clone(&ctx.http))
+                        .context("failed to configure the luau global environment")?;
+
+                    let scripts_path = Path::new(DATA_DIR).join("luau").join("scripts");
+
+                    load_scripts(&lua_lock, &scripts_path)
+                        .context("failed to load luau scripts")?;
+                }
+
                 Ok(Data {
                     config: config_clone,
                     db: db_clone,
                     server_cache: Cache::builder()
                         .time_to_live(std::time::Duration::from_mins(5))
                         .build(),
+
+                    lua,
+                    lua_callbacks,
                 })
             })
         })
         .options(options)
         .build();
 
-    // 1. Create the client
     let client = serenity::ClientBuilder::new(&config.bot.token, intents)
         .framework(framework)
         .await

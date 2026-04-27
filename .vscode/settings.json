@@ -1,0 +1,8 @@
+{
+    "luau-lsp.types.definitionFiles": {
+        "Skekbot": "global.d.luau"
+    },
+    "luau-lsp.completion.autocompleteEnd": true,
+    "luau-lsp.platform.type": "standard",
+    "luau-lsp.sourcemap.enabled": false
+}

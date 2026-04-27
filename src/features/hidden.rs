@@ -162,7 +162,12 @@ pub async fn event_handler(
         }
 
         if let Some(guild_id) = new_message.guild_id {
-            let server_table = crate::db::get_or_create_server_table_cached(&guild_id, &data.db, &data.server_cache).await?;
+            let server_table = crate::db::get_or_create_server_table_cached(
+                &guild_id,
+                &data.db,
+                &data.server_cache,
+            )
+            .await?;
 
             let should_reply = {
                 let mut rng = rand::rng();
