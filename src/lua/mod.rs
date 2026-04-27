@@ -2,15 +2,15 @@ mod event_handler;
 mod modules;
 mod signal;
 
-use crate::{server};
+use crate::server;
 use anyhow::{Context, Result};
 use mlua::{Lua, RegistryKey};
 use moka::future::Cache;
 use sea_orm::DatabaseConnection;
-use serenity::all::{Http};
+use serenity::all::Http;
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path};
+use std::path::Path;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex as StdMutex};
 
