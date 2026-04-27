@@ -81,6 +81,7 @@ pub async fn create_skekbot(
                         &Arc::clone(&ctx.http),
                         &server_cache,
                         &db_clone,
+                        &Path::new(DATA_DIR).join("luau").join("modules"),
                     )
                     .context("failed to configure the luau global environment")?;
 
