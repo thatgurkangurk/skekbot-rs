@@ -192,10 +192,10 @@ pub fn configure_lua_env(
 
         // prepend @ to the path so Luau formats errors as proper files, not [string]
         let chunk_name = format!("@{path}");
-        let mut result: mlua::Value = lua.load(&file_content).set_name(chunk_name).call(())?;
+        let result: mlua::Value = lua.load(&file_content).set_name(chunk_name).call(())?;
 
         if result.is_nil() {
-            result = mlua::Value::Boolean(true);
+            return Err(mlua::Error::RuntimeError(format!("the module at '{path}' is empty")));
         }
 
         loaded.set(path.as_str(), result.clone())?;
