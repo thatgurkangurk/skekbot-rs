@@ -1,4 +1,4 @@
-use mlua::{Lua, Table, Value};
+use mlua::{Lua, Value};
 use std::{collections::HashSet, time::Instant};
 
 use crate::lua::builder::ModuleBuilder;
@@ -63,7 +63,7 @@ fn stringify_value(
 pub fn setup(lua: &Lua) -> anyhow::Result<ModuleBuilder> {
     let mut builder = ModuleBuilder::new(lua, "Utils")?;
 
-    let start_time = std::time::Instant::now();
+    let start_time = Instant::now();
     builder.add_function(lua, "getUptime", "() -> number", move |_, ()| {
         Ok(start_time.elapsed().as_secs())
     })?;

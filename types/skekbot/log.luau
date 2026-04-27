@@ -1,6 +1,5 @@
-
 export type LogModule = {
-    log: (level: string, message: string) -> (),
+	log: (level: string, message: string) -> (),
 }
 
 return {} :: LogModule

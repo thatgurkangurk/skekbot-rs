@@ -1,3 +1,6 @@
+use std::path::Path;
+use stylua_lib::{Config as StyluaConfig, OutputVerification};
+
 pub struct ModuleBuilder {
     name: String,
     functions: Vec<(String, String)>,
@@ -6,6 +9,21 @@ pub struct ModuleBuilder {
 }
 
 impl ModuleBuilder {
+    fn get_stylua_config(&self) -> StyluaConfig {
+        let config_path = Path::new(".stylua.toml");
+
+        if config_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(config_path)
+                && let Ok(config) = toml::from_str(&content)
+            {
+                return config;
+            }
+            tracing::warn!("found .stylua.toml but failed to parse it. using defaults.");
+        }
+
+        StyluaConfig::default()
+    }
+
     pub fn new(lua: &mlua::Lua, name: &str) -> mlua::Result<Self> {
         Ok(Self {
             name: name.to_string(),
@@ -63,7 +81,7 @@ impl ModuleBuilder {
 
         for ty in &self.custom_types {
             content.push_str(ty);
-            content.push('\n');
+            content.push_str("\n");
         }
 
         content.push_str(&format!("\nexport type {}Module = {{\n", self.name));
@@ -73,8 +91,16 @@ impl ModuleBuilder {
         content.push_str("}\n\n");
         content.push_str(&format!("return {{}} :: {}Module\n", self.name));
 
+        let config = self.get_stylua_config();
+
+        let formatted_content =
+            stylua_lib::format_code(&content, config, None, OutputVerification::None)
+                .map_err(|e| std::io::Error::other(e.to_string()))?;
+
         let file_path = base_path.join(format!("{}.luau", self.name.to_lowercase()));
-        std::fs::write(file_path, content)
+        std::fs::write(&file_path, formatted_content)?;
+
+        Ok(())
     }
 
     // For attaching pre-computed values, tables, or signals
