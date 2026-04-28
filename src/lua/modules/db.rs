@@ -16,14 +16,14 @@ pub fn setup(
     let db_clone = db.clone();
     let cache_clone = server_cache.clone();
 
-    builder.declare_struct_as::<server::Model>("ServerSettings");
+    builder.use_module("types", "Types");
 
     builder.add_async_function(
         lua,
         "getOrCreateServerSettings",
-        "(server_id: string) -> ServerSettings",
+        "(server_id: string) -> Types.ServerSettings",
         move |lua, server_id: String| {
-            let db = db_clone.clone();
+            let db: DatabaseConnection = db_clone.clone();
             let cache = cache_clone.clone();
 
             async move {

@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fmt::Write;
 
 use crate::lua::LuauTypeExt;
@@ -6,6 +7,8 @@ pub struct ModuleBuilder {
     name: String,
     functions: Vec<(String, String)>,
     custom_types: Vec<String>,
+
+    imports: BTreeMap<String, String>,
     table: mlua::Table,
 }
 
@@ -15,6 +18,7 @@ impl ModuleBuilder {
             name: name.to_string(),
             functions: Vec::new(),
             custom_types: Vec::new(),
+            imports: BTreeMap::new(),
             table: lua.create_table()?,
         })
     }
@@ -67,9 +71,17 @@ impl ModuleBuilder {
 
         let to_io_err = |e| std::io::Error::other(e);
 
-        for ty in &self.custom_types {
-            content.push_str(ty);
+        // emit imports first
+        for (alias, path) in &self.imports {
+            writeln!(content, r#"local {alias} = require("{path}")"#).map_err(to_io_err)?;
+        }
+
+        if !self.imports.is_empty() {
             content.push('\n');
+        }
+
+        for ty in &self.custom_types {
+            writeln!(content, "{ty}").map_err(to_io_err)?;
         }
 
         writeln!(content, "\nexport type {}Module = {{", self.name).map_err(to_io_err)?;
@@ -110,6 +122,11 @@ impl ModuleBuilder {
         let def = T::luau_definition();
         self.custom_types
             .push(format!("export type {name} = {def}"));
+    }
+
+    pub fn use_module(&mut self, module: &str, namespace: &str) {
+        let full_path = format!("@skekbot/{}", module.to_lowercase());
+        self.imports.insert(namespace.to_string(), full_path);
     }
 
     // For attaching pre-computed values, tables, or signals

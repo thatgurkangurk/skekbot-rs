@@ -108,6 +108,7 @@ pub fn configure_lua_env(
         modules::log::setup(lua)?,
         modules::db::setup(lua, db_conn, server_cache)?,
         modules::events::setup(lua, callbacks)?,
+        modules::types::setup(lua)?,
     ];
 
     for builder in &builders {

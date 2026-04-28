@@ -1,7 +1,7 @@
-export type ServerSettings = { id: number, hidden_chance: number, dad_enabled: boolean }
+local Types = require("@skekbot/types")
 
 export type DbModule = {
-	getOrCreateServerSettings: (server_id: string) -> ServerSettings,
+	getOrCreateServerSettings: (server_id: string) -> Types.ServerSettings,
 }
 
 return {} :: DbModule
