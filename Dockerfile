@@ -18,7 +18,7 @@ COPY --from=planner /skekbot-rs/recipe.json recipe.json
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
-    cargo chef cook --release --recipe-path recipe.json
+    cargo chef cook --release --no-default-features --recipe-path recipe.json
 
 COPY . .
 
@@ -29,7 +29,7 @@ ARG DATA_DIR="/app/data"
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
-    cargo build --release --bin skekbot_rs && \
+    cargo build --release --no-default-features --bin skekbot_rs && \
     mkdir -p /out && \
     cp target/release/skekbot_rs /out/skekbot_rs
 

@@ -3,6 +3,9 @@ mod event_handler;
 pub mod modules;
 mod signal;
 
+#[cfg(feature = "formatting")]
+mod format;
+
 use crate::server;
 use anyhow::{Context, Result};
 use mlua::{Lua, RegistryKey};

@@ -1,5 +1,4 @@
-use std::path::Path;
-use stylua_lib::{Config as StyluaConfig, OutputVerification};
+use std::fmt::Write;
 
 pub struct ModuleBuilder {
     name: String,
@@ -9,21 +8,6 @@ pub struct ModuleBuilder {
 }
 
 impl ModuleBuilder {
-    fn get_stylua_config(&self) -> StyluaConfig {
-        let config_path = Path::new(".stylua.toml");
-
-        if config_path.exists() {
-            if let Ok(content) = std::fs::read_to_string(config_path)
-                && let Ok(config) = toml::from_str(&content)
-            {
-                return config;
-            }
-            tracing::warn!("found .stylua.toml but failed to parse it. using defaults.");
-        }
-
-        StyluaConfig::default()
-    }
-
     pub fn new(lua: &mlua::Lua, name: &str) -> mlua::Result<Self> {
         Ok(Self {
             name: name.to_string(),
@@ -79,26 +63,36 @@ impl ModuleBuilder {
 
         let mut content = String::new();
 
+        let to_io_err = |e| std::io::Error::other(e);
+
         for ty in &self.custom_types {
             content.push_str(ty);
-            content.push_str("\n");
+            content.push('\n');
         }
 
-        content.push_str(&format!("\nexport type {}Module = {{\n", self.name));
+        writeln!(content, "\nexport type {}Module = {{", self.name).map_err(to_io_err)?;
+
         for (fn_name, fn_type) in &self.functions {
-            content.push_str(&format!("    {fn_name}: {fn_type},\n"));
+            writeln!(content, "    {fn_name}: {fn_type},").map_err(to_io_err)?;
         }
+
         content.push_str("}\n\n");
-        content.push_str(&format!("return {{}} :: {}Module\n", self.name));
+        writeln!(content, "return {{}} :: {}Module", self.name).map_err(to_io_err)?;
 
-        let config = self.get_stylua_config();
-
-        let formatted_content =
-            stylua_lib::format_code(&content, config, None, OutputVerification::None)
-                .map_err(|e| std::io::Error::other(e.to_string()))?;
+        let final_content = {
+            #[cfg(feature = "formatting")]
+            {
+                crate::lua::format::format_code(&content)
+                    .map_err(|e| std::io::Error::other(e.to_string()))?
+            }
+            #[cfg(not(feature = "formatting"))]
+            {
+                content
+            }
+        };
 
         let file_path = base_path.join(format!("{}.luau", self.name.to_lowercase()));
-        std::fs::write(&file_path, formatted_content)?;
+        std::fs::write(&file_path, final_content)?;
 
         Ok(())
     }
