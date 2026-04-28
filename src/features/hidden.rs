@@ -1,4 +1,3 @@
-use ::serenity::all::{EditMember, Timestamp};
 use nlprule::{Tokenizer, tokenizer_filename};
 use phf::{phf_map, phf_set};
 use poise::serenity_prelude as serenity;
@@ -6,7 +5,7 @@ use rand::RngExt;
 use regex::Regex;
 use serenity::all::{CreateAllowedMentions, CreateMessage, UserId};
 use std::sync::LazyLock;
-use tracing::{error, info};
+use tracing::info;
 
 use crate::{Data, Error};
 
@@ -162,7 +161,12 @@ pub async fn event_handler(
         }
 
         if let Some(guild_id) = new_message.guild_id {
-            let server_table = crate::db::get_or_create_server_table_cached(&guild_id, &data.db, &data.server_cache).await?;
+            let server_table = crate::db::get_or_create_server_table_cached(
+                &guild_id,
+                &data.db,
+                &data.server_cache,
+            )
+            .await?;
 
             let should_reply = {
                 let mut rng = rand::rng();

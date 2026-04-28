@@ -46,14 +46,13 @@ impl IntoResponse for AppError {
         struct Tmpl {}
 
         let status = match &self {
-            AppError::Render(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Render(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let tmpl = Tmpl {};
-        if let Ok(body) = tmpl.render() {
-            (status, Html(body)).into_response()
-        } else {
-            (status, "Something went wrong").into_response()
-        }
+        tmpl.render().map_or_else(
+            |_| (status, "Something went wrong").into_response(),
+            |body| (status, Html(body)).into_response(),
+        )
     }
 }
 
