@@ -2,6 +2,7 @@ mod builder;
 mod event_handler;
 pub mod modules;
 mod signal;
+mod types;
 
 #[cfg(feature = "formatting")]
 mod format;
@@ -20,6 +21,8 @@ use std::{env, fs};
 
 use crate::Data;
 use crate::consts::DATA_DIR;
+
+pub use types::LuauTypeExt;
 
 static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
 

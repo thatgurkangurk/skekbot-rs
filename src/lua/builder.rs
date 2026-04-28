@@ -1,5 +1,7 @@
 use std::fmt::Write;
 
+use crate::lua::LuauTypeExt;
+
 pub struct ModuleBuilder {
     name: String,
     functions: Vec<(String, String)>,
@@ -95,6 +97,19 @@ impl ModuleBuilder {
         std::fs::write(&file_path, final_content)?;
 
         Ok(())
+    }
+
+    pub fn declare_struct_as<T: LuauTypeExt>(&mut self, alias: &str) {
+        let def = T::luau_definition();
+        self.custom_types
+            .push(format!("export type {alias} = {def}"));
+    }
+
+    pub fn declare_struct<T: LuauTypeExt>(&mut self) {
+        let name = T::luau_name();
+        let def = T::luau_definition();
+        self.custom_types
+            .push(format!("export type {name} = {def}"));
     }
 
     // For attaching pre-computed values, tables, or signals

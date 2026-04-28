@@ -16,15 +16,7 @@ pub fn setup(
     let db_clone = db.clone();
     let cache_clone = server_cache.clone();
 
-    builder.add_type_declaration(
-        r"
-export type ServerSettings = {
-    guild_id: string,
-    prefix: string,
-    logging_channel: string?,
-}
-    ",
-    );
+    builder.declare_struct_as::<server::Model>("ServerSettings");
 
     builder.add_async_function(
         lua,
