@@ -5,8 +5,6 @@ use std::sync::Arc;
 
 use crate::lua::builder::ModuleBuilder;
 
-// Make sure to import your builder! Adjust this path if it's stored elsewhere.
-
 pub fn setup(lua: &Lua, http: &Arc<Http>) -> anyhow::Result<ModuleBuilder> {
     let mut builder = ModuleBuilder::new(lua, "Rest")?;
     let http_clone = Arc::clone(http);
