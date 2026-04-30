@@ -89,7 +89,7 @@ async fn announce(
         if user1 == user2 {
             "You played yourself and won!".into()
         } else {
-            format!("{} wins!", user1.display_name())
+            format!("{user1} wins!")
         }
     } else {
         if user1 != user2 {
@@ -98,7 +98,7 @@ async fn announce(
         if user1 == user2 {
             "You played yourself and lost!".into()
         } else {
-            format!("{} wins!", user2.display_name())
+            format!("{user2} wins!")
         }
     };
 
