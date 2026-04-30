@@ -1,5 +1,8 @@
 use crate::{Context, Error};
-use ::serenity::{all::{CreateInteractionResponseMessage, EditMessage}, futures::StreamExt};
+use ::serenity::{
+    all::{CreateInteractionResponseMessage, EditMessage},
+    futures::StreamExt,
+};
 use poise::{CreateReply, serenity_prelude as serenity};
 use rand::seq::IndexedRandom;
 
@@ -64,27 +67,48 @@ async fn announce(
 
     // remove buttons from the original message immediately
     let mut msg = interaction.message.clone();
-    let _ = msg.edit(&ctx.http(), EditMessage::new().components(vec![])).await;
+    let _ = msg
+        .edit(&ctx.http(), EditMessage::new().components(vec![]))
+        .await;
 
     let outcome = if user1_choice == user2_choice {
         losers.push(user1.clone());
         if user1 != user2 {
             losers.push(user2.clone());
         }
-        if user1 == user2 { "You played yourself and tied!" } else { "It's a tie!" }.to_string()
+        if user1 == user2 {
+            "You played yourself and tied!"
+        } else {
+            "It's a tie!"
+        }
+        .to_string()
     } else if user1_choice.beats(user2_choice) {
-        if user1 != user2 { losers.push(user2.clone()); }
-        if user1 == user2 { "You played yourself and won!".into() } else { format!("{} wins!", user1.display_name()) }
+        if user1 != user2 {
+            losers.push(user2.clone());
+        }
+        if user1 == user2 {
+            "You played yourself and won!".into()
+        } else {
+            format!("{} wins!", user1.display_name())
+        }
     } else {
-        if user1 != user2 { losers.push(user1.clone()); }
-        if user1 == user2 { "You played yourself and lost!".into() } else { format!("{} wins!", user2.display_name()) }
+        if user1 != user2 {
+            losers.push(user1.clone());
+        }
+        if user1 == user2 {
+            "You played yourself and lost!".into()
+        } else {
+            format!("{} wins!", user2.display_name())
+        }
     };
 
     // timeout logic
     if let Some(guild_id) = interaction.guild_id {
         for loser in losers {
             // don't try to timeout the bot itself (cuz that's silly)
-            if loser.id == ctx.cache().current_user().id { continue; }
+            if loser.id == ctx.cache().current_user().id {
+                continue;
+            }
 
             if let Ok(mut member) = guild_id.member(&ctx.http(), loser.id).await {
                 let timeout_until = std::time::SystemTime::now()
@@ -93,9 +117,12 @@ async fn announce(
                     .map(|d| d.as_secs().cast_signed());
 
                 if let Some(timestamp_secs) = timeout_until
-                    && let Ok(timestamp) = serenity::Timestamp::from_unix_timestamp(timestamp_secs) {
-                        let _ = member.disable_communication_until_datetime(&ctx.http(), timestamp).await;
-                    }
+                    && let Ok(timestamp) = serenity::Timestamp::from_unix_timestamp(timestamp_secs)
+                {
+                    let _ = member
+                        .disable_communication_until_datetime(&ctx.http(), timestamp)
+                        .await;
+                }
             }
         }
     }
@@ -105,9 +132,11 @@ async fn announce(
             &ctx.http(),
             serenity::CreateInteractionResponse::Message(
                 CreateInteractionResponseMessage::new().content(format!(
-                    "**{}** chose {}\n**{}** chose {}\n\n**Result:** {}",
-                    user1.display_name(), user1_choice.as_str(),
-                    user2.display_name(), user2_choice.as_str(),
+                    "{} chose {}.\n{} chose {}.\n\n{}",
+                    user1,
+                    user1_choice.as_str(),
+                    user2,
+                    user2_choice.as_str(),
                     outcome
                 )),
             ),
@@ -124,15 +153,22 @@ pub async fn rock_paper_scissors(
     #[description = "The user to play against."] against: serenity::User,
 ) -> Result<(), Error> {
     // send initial message and get the message object
-    let handle = ctx.send(CreateReply::default()
-        .content(format!("{} has challenged {} to Rock Paper Scissors!", ctx.author(), against))
-        .components(vec![serenity::CreateActionRow::Buttons(vec![
-            RockPaperScissorsOption::Rock.as_button(ctx.id()),
-            RockPaperScissorsOption::Paper.as_button(ctx.id()),
-            RockPaperScissorsOption::Scissors.as_button(ctx.id()),
-        ])])
-    ).await?;
-    
+    let handle = ctx
+        .send(
+            CreateReply::default()
+                .content(format!(
+                    "{} has challenged {} to Rock Paper Scissors!",
+                    ctx.author(),
+                    against
+                ))
+                .components(vec![serenity::CreateActionRow::Buttons(vec![
+                    RockPaperScissorsOption::Rock.as_button(ctx.id()),
+                    RockPaperScissorsOption::Paper.as_button(ctx.id()),
+                    RockPaperScissorsOption::Scissors.as_button(ctx.id()),
+                ])]),
+        )
+        .await?;
+
     let mut msg = handle.into_message().await?;
     let user_1_id = ctx.author().id;
     let user_2_id = against.id;
@@ -160,11 +196,16 @@ pub async fn rock_paper_scissors(
             user_2_choice = Some(choice);
         } else {
             // ignore people who aren't in the game
-            let _ = mci.create_response(&ctx.http(), serenity::CreateInteractionResponse::Message(
-                CreateInteractionResponseMessage::new()
-                    .content("You aren't a part of this battle!")
-                    .ephemeral(true)
-            )).await;
+            let _ = mci
+                .create_response(
+                    &ctx.http(),
+                    serenity::CreateInteractionResponse::Message(
+                        CreateInteractionResponseMessage::new()
+                            .content("You aren't a part of this battle!")
+                            .ephemeral(true),
+                    ),
+                )
+                .await;
             continue;
         }
 
@@ -180,11 +221,23 @@ pub async fn rock_paper_scissors(
         }
 
         // acknowledge the click so it doesnt say that the interaction failed
-        let _ = mci.create_response(&ctx.http(), serenity::CreateInteractionResponse::Acknowledge).await;
+        let _ = mci
+            .create_response(
+                &ctx.http(),
+                serenity::CreateInteractionResponse::Acknowledge,
+            )
+            .await;
     }
 
     // clean up if the game times out
-    let _ = msg.edit(&ctx.http(), EditMessage::new().content("game timed out!").components(vec![])).await;
+    let _ = msg
+        .edit(
+            &ctx.http(),
+            EditMessage::new()
+                .content("game timed out!")
+                .components(vec![]),
+        )
+        .await;
 
     Ok(())
 }
