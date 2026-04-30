@@ -1,4 +1,4 @@
-FROM lukemathwalker/cargo-chef:0.1.77-rust-1.93.1-alpine3.23 AS chef
+FROM lukemathwalker/cargo-chef:0.1.77-rust-1.95.0-alpine3.23 AS chef
 LABEL org.opencontainers.image.source="https://github.com/thatgurkangurk/skekbot-rs"
 
 WORKDIR /skekbot-rs
