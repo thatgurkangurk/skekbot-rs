@@ -1,8 +1,6 @@
 FROM alpine:3.23 AS runtime
 WORKDIR /skekbot-rs
 
-COPY /out/skekbot_rs /usr/local/bin/skekbot_rs
-
 RUN apk add --no-cache ca-certificates tzdata && \
     update-ca-certificates
 
