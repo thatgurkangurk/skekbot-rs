@@ -1,5 +1,5 @@
-use mlua::{FromLua, Lua, Value};
 use mlua::LuaSerdeExt;
+use mlua::{FromLua, Lua, Value};
 
 use crate::lua::builder::ModuleBuilder;
 use crate::models::server;
@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 #[derive(Serialize, Deserialize, Type, Clone, Debug)]
+#[serde(rename = "Message")]
 pub struct LuaMessage {
     pub id: String,
     pub content: String,
@@ -23,6 +24,7 @@ impl FromLua for LuaMessage {
 }
 
 #[derive(Serialize, Deserialize, Type, Clone, Debug)]
+#[serde(rename = "User")]
 pub struct LuaUser {
     pub id: String,
     pub bot: bool,
@@ -40,6 +42,7 @@ pub fn setup(lua: &Lua) -> anyhow::Result<ModuleBuilder> {
     let mut builder = ModuleBuilder::new(lua, "Types")?;
 
     builder.declare_struct_as::<server::Model>("ServerSettings");
+    builder.declare_struct_as::<LuaUser>("User");
     builder.declare_struct_as::<LuaMessage>("Message");
 
     Ok(builder)

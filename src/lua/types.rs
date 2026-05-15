@@ -29,6 +29,12 @@ impl<T: Type> LuauTypeExt for T {
         let mut types = Types::default();
         let dt = T::definition(&mut types);
 
+        if let DataType::Reference(Reference::Named(named_ref)) = &dt
+            && let Some(named) = named_ref.get(&types)
+        {
+            return map_specta_to_luau(named.ty(), &types);
+        }
+
         map_specta_to_luau(&dt, &types)
     }
 }
@@ -50,6 +56,7 @@ fn map_specta_to_luau(dt: &DataType, types: &Types) -> String {
     match dt {
         DataType::Primitive(p) => match p {
             PrimitiveType::bool => "boolean".into(),
+
             PrimitiveType::char | PrimitiveType::str => "string".into(),
 
             PrimitiveType::i8
@@ -100,7 +107,18 @@ fn reference_to_luau(reference: &Reference, types: &Types) -> String {
     match reference {
         Reference::Named(named_ref) => named_ref.get(types).map_or_else(
             || "any".into(),
-            |named| map_specta_to_luau(named.ty(), types),
+            |named| {
+                let name = named.name();
+
+                if name == "String" {
+                    "string".into()
+                } else if name.starts_with("Lua") {
+                    // really bad workaround FOR NOW
+                    name.trim_start_matches("Lua").to_string()
+                } else {
+                    name.to_string()
+                }
+            },
         ),
         Reference::Generic(_) | Reference::Opaque(_) => "any".into(),
     }

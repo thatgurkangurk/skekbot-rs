@@ -4,7 +4,10 @@ use tokio::time::timeout;
 
 use poise::serenity_prelude as serenity;
 
-use crate::{Data, Error, lua::modules::types::{LuaMessage, LuaUser}};
+use crate::{
+    Data, Error,
+    lua::modules::types::{LuaMessage, LuaUser},
+};
 
 #[allow(clippy::significant_drop_tightening)]
 pub async fn lua_event_handler(
@@ -58,7 +61,7 @@ pub async fn lua_event_handler(
                     id: new_message.author.id.get().to_string(),
                     bot: new_message.author.bot,
                     global_name: new_message.author.global_name.clone(),
-                    username: new_message.author.name.clone()
+                    username: new_message.author.name.clone(),
                 };
 
                 let message_data = LuaMessage {

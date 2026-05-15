@@ -1,7 +1,7 @@
 use mlua::{Lua, Value};
 use std::{collections::HashSet, time::Instant};
 
-use crate::lua::builder::ModuleBuilder;
+use crate::{lua::builder::ModuleBuilder, util};
 
 fn stringify_value(
     value: &Value,
@@ -75,6 +75,16 @@ pub fn setup(lua: &Lua) -> anyhow::Result<ModuleBuilder> {
         move |_, value: Value| {
             let mut visited = HashSet::new();
             let result = stringify_value(&value, &mut visited, 0)?;
+            Ok(result)
+        },
+    )?;
+
+    builder.add_function(
+        lua,
+        "sanitisePings",
+        "(message: string) -> string",
+        move |_, message: String| {
+            let result = util::sanitise_pings(message.as_str());
             Ok(result)
         },
     )?;
