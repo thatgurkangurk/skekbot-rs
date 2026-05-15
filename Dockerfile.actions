@@ -1,0 +1,23 @@
+FROM alpine:3.23 AS runtime
+WORKDIR /skekbot-rs
+
+COPY --from=builder /out/skekbot_rs /usr/local/bin/skekbot_rs
+
+RUN apk add --no-cache ca-certificates tzdata && \
+    update-ca-certificates
+
+    ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
+ARG DATA_DIR="/app/data"
+
+ARG UID=1000
+ARG GID=1000
+
+RUN addgroup -g $GID -S skekbot && \
+    adduser -u $UID -S skekbot -G skekbot
+
+COPY ./deploy-out/skekbot_rs /usr/local/bin/skekbot_rs
+
+USER skekbot-rs
+
+ENTRYPOINT ["/usr/local/bin/skekbot_rs"]
