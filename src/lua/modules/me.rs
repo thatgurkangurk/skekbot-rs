@@ -4,9 +4,7 @@ use mlua::Lua;
 use mlua::LuaSerdeExt;
 use poise::serenity_prelude as serenity;
 
-use crate::{
-    lua::{builder::ModuleBuilder, modules::types::LuaUser}
-};
+use crate::lua::{builder::ModuleBuilder, modules::types::LuaUser};
 
 pub fn setup(lua: &Lua, http: &Arc<serenity::Http>) -> anyhow::Result<ModuleBuilder> {
     let mut builder = ModuleBuilder::new(lua, "Me")?;

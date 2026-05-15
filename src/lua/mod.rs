@@ -43,12 +43,19 @@ pub use event_handler::lua_event_handler;
 pub fn load_scripts(lua: &Lua, directory: impl AsRef<Path>) -> Result<()> {
     let script_dir = directory.as_ref();
 
-    if !script_dir.exists() || !script_dir.is_dir() {
-        tracing::warn!(
-            "directory '{:?}' not found. skipping script loading",
-            script_dir
-        );
-        return Ok(());
+    if !script_dir.exists() {
+        tracing::info!("directory '{:?}' not found. creating it...", script_dir);
+        std::fs::create_dir_all(&script_dir).map_err(|e| {
+            tracing::error!("failed to create directory '{:?}': {}", script_dir, e);
+            e
+        })?;
+    } else if !script_dir.is_dir() {
+        tracing::error!("path '{:?}' exists but is not a directory", script_dir);
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::AlreadyExists,
+            "Path exists and is not a directory",
+        )
+        .into());
     }
 
     for entry in fs::read_dir(script_dir).context("failed to read scripts directory")? {
@@ -109,7 +116,7 @@ pub fn configure_lua_env(
         modules::db::setup(lua, db_conn, server_cache)?,
         modules::events::setup(lua, callbacks)?,
         modules::types::setup(lua)?,
-        modules::me::setup(lua, http)?
+        modules::me::setup(lua, http)?,
     ];
 
     for builder in &builders {
