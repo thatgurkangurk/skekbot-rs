@@ -45,21 +45,26 @@ jobs:
         with:
           install: true
 
-      - name: Install mold & build-essential
-        run: sudo apt-get update && sudo apt-get install -y mold build-essential
+      - name: Install musl-tools, mold & build-essential
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools mold build-essential clang
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
           key: skekbot-rs
 
+      - name: Add Rust musl target
+        run: rustup target add x86_64-unknown-linux-musl
+
       - name: Build Release Binary
         run: |
-          cargo build --release
+          cargo build --release --target x86_64-unknown-linux-musl
           mkdir -p ./deploy-out
-          cp target/release/${{ env.BIN_NAME }} ./deploy-out/
+          cp target/x86_64-unknown-linux-musl/release/${{ env.BIN_NAME }} ./deploy-out/
         env:
-          RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=mold"
+          RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=mold -C target-feature=+crt-static"
           DATA_DIR: "/app/data"
 
       - name: Set up Docker Buildx
