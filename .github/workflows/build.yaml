@@ -64,9 +64,10 @@ jobs:
           mkdir -p ./deploy-out
           cp target/x86_64-unknown-linux-musl/release/${{ env.BIN_NAME }} ./deploy-out/
         env:
-          CC_x86_64_unknown_linux_musl: clang
+          CC_x86_64_unknown_linux_musl: musl-gcc
           CXX_x86_64_unknown_linux_musl: clang++
-          RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=mold -C target-feature=+crt-static"
+          RUSTFLAGS: "-C linker=musl-gcc -C link-arg=-fuse-ld=mold"
+          AR_x86_64_unknown_linux_musl: ar
           DATA_DIR: "/app/data"
 
       - name: Set up Docker Buildx
