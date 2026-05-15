@@ -125,20 +125,20 @@ impl ModuleBuilder {
     }
 
     /// injects the `@skekbot/<module>` import at the top of the file under the `<namespace>` namespace
-    /// 
+    ///
     /// example:
-    /// 
+    ///
     /// ```
     /// builder.use_module("types", "Types")
     /// ```
-    /// 
+    ///
     /// injects
     /// ```lua
     /// local Types = require("@skekbot/types")
     /// ```
-    /// 
+    ///
     /// **NOTE: this can only inject imports from the @skekbot namespace !**
-    /// 
+    ///
     /// this shouldn't really matter however because... *why are you trying to require external modules in typedefs?*
     pub fn use_module(&mut self, module: &str, namespace: &str) {
         let full_path = format!("@skekbot/{}", module.to_lowercase());

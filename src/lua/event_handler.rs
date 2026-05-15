@@ -1,10 +1,10 @@
-use mlua::Function;
+use mlua::{Function, LuaSerdeExt};
 use std::time::Duration;
 use tokio::time::timeout;
 
 use poise::serenity_prelude as serenity;
 
-use crate::{Data, Error};
+use crate::{Data, Error, lua::modules::types::{LuaMessage, LuaUser}};
 
 #[allow(clippy::significant_drop_tightening)]
 pub async fn lua_event_handler(
@@ -40,10 +40,6 @@ pub async fn lua_event_handler(
         }
 
         serenity::FullEvent::Message { new_message } => {
-            if new_message.author.bot {
-                return Ok(());
-            }
-
             let (funcs, lua_msg) = {
                 let lua = data.lua.lock().await;
 
@@ -58,18 +54,24 @@ pub async fn lua_event_handler(
                         .collect::<Vec<_>>()
                 };
 
-                let msg = lua
-                    .create_table()
-                    .map_err(|e| anyhow::anyhow!("Lua error: {e}"))?;
-                let _ = msg.set("content", new_message.content.clone());
-                let _ = msg.set("author", new_message.author.name.clone());
-                let _ = msg.set("channel_id", new_message.channel_id.get().to_string());
-                let _ = msg.set(
-                    "guild_id",
-                    new_message.guild_id.map(|id| id.get().to_string()),
-                );
+                let author_data = LuaUser {
+                    id: new_message.author.id.get().to_string(),
+                    bot: new_message.author.bot,
+                    global_name: new_message.author.global_name.clone(),
+                    username: new_message.author.name.clone()
+                };
 
-                (func, msg)
+                let message_data = LuaMessage {
+                    id: new_message.id.get().to_string(),
+                    content: new_message.content.clone(),
+                    author: author_data,
+                    channel_id: new_message.channel_id.get().to_string(),
+                    guild_id: new_message.guild_id.map(|id| id.get().to_string()),
+                };
+
+                let lua_value = lua.to_value(&message_data)?;
+
+                (func, lua_value)
             };
 
             for func in funcs {

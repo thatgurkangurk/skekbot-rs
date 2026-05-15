@@ -6,16 +6,13 @@ use crate::lua::{BotCallbacks, EventType, signal::create_signal};
 
 pub fn setup(lua: &Lua, callbacks: &Arc<StdMutex<BotCallbacks>>) -> anyhow::Result<ModuleBuilder> {
     let mut builder = ModuleBuilder::new(lua, "Events")?;
+    builder.use_module("types", "Types");
 
     builder
         .add_type_declaration("export type Connection = { Disconnect: (self: Connection) -> () }");
 
     builder.add_type_declaration(
         "export type Signal<T> = { Connect: (self: Signal<T>, callback: (T) -> ()) -> () }",
-    );
-
-    builder.add_type_declaration(
-        "export type Message = { content: string, author: string, channel_id: string, guild_id: string? }"
     );
 
     builder.add_value(
@@ -26,7 +23,7 @@ pub fn setup(lua: &Lua, callbacks: &Arc<StdMutex<BotCallbacks>>) -> anyhow::Resu
 
     builder.add_value(
         "OnMessageCreate",
-        "Signal<Message>",
+        "Signal<Types.Message>",
         create_signal(lua, &Arc::clone(callbacks), EventType::MessageCreate)?,
     )?;
 
