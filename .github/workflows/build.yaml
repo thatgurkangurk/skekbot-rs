@@ -14,7 +14,7 @@ env:
   IMAGE_NAME: "thatgurkangurk/skekbot-rs"
   CARGO_INCREMENTAL: 0
   CARGO_TERM_COLOR: always
-  BIN_NAME: skekbot-rs
+  BIN_NAME: skekbot_rs
   MISE_EXPERIMENTAL: true
 
 concurrency:
