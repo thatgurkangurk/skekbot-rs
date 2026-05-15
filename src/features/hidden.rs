@@ -1,4 +1,3 @@
-use ::serenity::all::{EditMember, Timestamp};
 use nlprule::{Tokenizer, tokenizer_filename};
 use phf::{phf_map, phf_set};
 use poise::serenity_prelude as serenity;
@@ -6,7 +5,7 @@ use rand::RngExt;
 use regex::Regex;
 use serenity::all::{CreateAllowedMentions, CreateMessage, UserId};
 use std::sync::LazyLock;
-use tracing::{error, info};
+use tracing::info;
 
 use crate::{Data, Error};
 

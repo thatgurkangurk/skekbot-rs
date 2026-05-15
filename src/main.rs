@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{env, path::Path};
 
 use console::style;
 use skekbot_rs::{Config, consts, web};
@@ -66,6 +66,8 @@ fn print_startup_info() {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let is_generate_types = env::args().nth(1).as_deref() == Some("generate-types");
+
     let filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("warn,skekbot_rs=info"));
 
@@ -103,6 +105,12 @@ async fn main() -> anyhow::Result<()> {
     let db = skekbot_rs::db::create_db(&config).await?;
 
     let (mut discord_client, web_state) = skekbot_rs::create_skekbot(&config, &db).await?;
+
+    if is_generate_types {
+        tracing::info!("'generate-types' subcommand invoked.");
+        tracing::info!("types successfully written to ./types/skekbot/. exiting...");
+        return Ok(());
+    }
 
     tokio::spawn(async move {
         web::run_web(web_state).await;

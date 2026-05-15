@@ -6,6 +6,11 @@ license = "MPL-2.0"
 repository = "https://github.com/thatgurkangurk/skekbot-rs"
 authors = ["gurkan", "Skekdog"]
 
+[features]
+default = ["formatting"]
+
+formatting = ["dep:stylua"]
+
 [dependencies]
 ab_glyph = "0.2.32"
 anyhow = "1.0.102"
@@ -19,6 +24,7 @@ displaydoc = "0.2.5"
 image = "0.25.10"
 imageproc = "0.26.1"
 mime_guess = "2.0.5"
+mlua = { version = "0.11.6", features = ["luau-jit", "async", "vendored", "send", "serde"] }
 moka = { version = "0.12.15", features = ["future"] }
 nlprule = "0.6.4"
 phf = { version = "0.13.1", features = ["macros"] }
@@ -31,8 +37,11 @@ sea-orm = { version = "^2.0.0-rc", features = ["sqlx-sqlite", "runtime-tokio-rus
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 serenity = "0.12.5"
+specta = { version = "=2.0.0-rc.24", features = ["derive"] }
+stylua = { version = "2.4.1", features = ["luau"], optional = true }
 thiserror = "2.0.18"
 tokio = { version = "1.52.0", features = ["macros", "rt-multi-thread"] }
+toml = "1.1.2"
 tower-http = { version = "0.6.8", features = ["fs"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "chrono"] }
