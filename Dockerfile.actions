@@ -18,6 +18,6 @@ RUN mkdir -p /app/data && chown skekbot:skekbot /app/data
 
 COPY ./deploy-out/skekbot_rs /usr/local/bin/skekbot_rs
 
-USER skekbot-rs
+USER skekbot
 
 ENTRYPOINT ["/usr/local/bin/skekbot_rs"]
