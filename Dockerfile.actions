@@ -1,12 +1,12 @@
 FROM alpine:3.23 AS runtime
 WORKDIR /skekbot-rs
 
-COPY --from=builder /out/skekbot_rs /usr/local/bin/skekbot_rs
+COPY /out/skekbot_rs /usr/local/bin/skekbot_rs
 
 RUN apk add --no-cache ca-certificates tzdata && \
     update-ca-certificates
 
-    ARG APP_VERSION
+ARG APP_VERSION
 ENV APP_VERSION=$APP_VERSION
 ARG DATA_DIR="/app/data"
 
