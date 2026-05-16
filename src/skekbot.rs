@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::{collections::HashSet, path::Path, sync::Arc};
 
 use crate::{
     Config, Data, Error, commands,
@@ -77,6 +77,15 @@ pub async fn create_skekbot(
     let callbacks_clone = Arc::clone(&lua_callbacks);
     let cache_clone = server_cache.clone();
 
+    let config_owners: HashSet<serenity::UserId> = config
+        .bot
+        .owners
+        .as_ref()
+        .map_or(&[][..], |v| &v[..])
+        .iter()
+        .copied()
+        .collect();
+
     let options = poise::FrameworkOptions {
         commands: vec![
             commands::ping::ping(),
@@ -91,6 +100,7 @@ pub async fn create_skekbot(
             Box::pin(event_handler_root(ctx, event, framework, data))
         },
         on_error: |error| Box::pin(on_error(error)),
+        owners: config_owners,
         ..Default::default()
     };
 
