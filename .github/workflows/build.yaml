@@ -55,7 +55,7 @@ jobs:
 
       - name: Build Release Binary
         run: |
-          cargo build --release
+          cargo build --release --no-default-features
           mkdir -p ./deploy-out
           cp target/release/${{ env.BIN_NAME }} ./deploy-out/
         env:

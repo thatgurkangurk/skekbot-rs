@@ -1,17 +1,8 @@
 use nlprule::{Tokenizer, tokenizer_filename};
 use phf::{phf_map, phf_set};
 use poise::serenity_prelude as serenity;
-use rand::RngExt;
 use regex::Regex;
-use serenity::all::{CreateAllowedMentions, CreateMessage, UserId};
 use std::sync::LazyLock;
-use tracing::info;
-
-use crate::{Data, Error};
-
-#[allow(clippy::unreadable_literal)]
-// this is a discord user id so its FINE.
-const HIDDEN_USER_ID: UserId = UserId::new(475851244737396740);
 
 static ALLOWED_ABBREVIATIONS: phf::Map<&'static str, &'static str> = phf_map! {
     "perms" => "permissions",
@@ -34,14 +25,11 @@ static PHRASE_BREAKERS: phf::Set<&'static str> = phf_set! {
 static ARTICLE_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)\b(a|an|the)\b").unwrap());
 
-#[allow(clippy::unwrap_used)]
-static MENTIONS_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<@!?\d+>").unwrap());
-
 static TOKENIZER_BYTES: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/", tokenizer_filename!("en")));
 
 #[allow(clippy::expect_used)]
-static NLP: LazyLock<Tokenizer> = LazyLock::new(|| {
+pub static NLP: LazyLock<Tokenizer> = LazyLock::new(|| {
     Tokenizer::from_reader(std::io::Cursor::new(TOKENIZER_BYTES))
         .expect("Failed to load embedded NLP model")
 });
@@ -51,7 +39,7 @@ struct Phrase {
     plural: bool,
 }
 
-fn extract_nouns_with_correct_verb(text: &str) -> Option<String> {
+pub fn extract_nouns_with_correct_verb(text: &str) -> Option<String> {
     let mut phrases: Vec<Phrase> = Vec::new();
     let mut current_words: Vec<String> = Vec::new();
 
@@ -138,94 +126,4 @@ fn extract_nouns_with_correct_verb(text: &str) -> Option<String> {
         resolved,
         if target_phrase.plural { "are" } else { "is" }
     ))
-}
-
-pub async fn event_handler(
-    ctx: &serenity::Context,
-    event: &serenity::FullEvent,
-    _framework: poise::FrameworkContext<'_, Data, Error>,
-    data: &Data,
-) -> Result<(), Error> {
-    if let serenity::FullEvent::Ready { data_about_bot: _ } = event {
-        info!("warming up the nlp engine...");
-        let _ = NLP.pipe("warmup");
-        info!("nlp engine loaded. ready to annoy hidden teehee.");
-    }
-
-    if let serenity::FullEvent::Message { new_message } = event {
-        if new_message.author.bot {
-            return Ok(());
-        }
-        if new_message.author.id != HIDDEN_USER_ID {
-            return Ok(());
-        }
-
-        if let Some(guild_id) = new_message.guild_id {
-            let server_table = crate::db::get_or_create_server_table_cached(
-                &guild_id,
-                &data.db,
-                &data.server_cache,
-            )
-            .await?;
-
-            let should_reply = {
-                let mut rng = rand::rng();
-                rng.random_bool(server_table.hidden_chance)
-            };
-
-            if !should_reply {
-                return Ok(());
-            }
-        }
-
-        // let should_timeout = {
-        //     let mut rng = rand::rng();
-        //     rng.random_bool(0.45)
-        // };
-
-        // if should_timeout {
-        //     #[allow(clippy::expect_used)]
-        //     let timeout_until =
-        //         Timestamp::from_unix_timestamp(Timestamp::now().unix_timestamp() + 300)
-        //             .expect("Invalid timestamp");
-
-        //     if let Some(guild_id) = new_message.guild_id {
-        //         let builder = EditMember::new().disable_communication_until_datetime(timeout_until);
-
-        //         if let Err(why) = guild_id
-        //             .edit_member(&ctx.http, &HIDDEN_USER_ID, builder)
-        //             .await
-        //         {
-        //             error!("Error timing out user: {why:?}");
-        //         } else {
-        //             info!("User {HIDDEN_USER_ID} has been timed out.");
-        //         }
-        //     }
-        // }
-
-        let content = &new_message.content;
-        if content.len() < 3 {
-            return Ok(());
-        }
-
-        let sanitised_content = MENTIONS_REGEX.replace_all(content, "").into_owned();
-
-        let Some(noun) = extract_nouns_with_correct_verb(&sanitised_content) else {
-            return Ok(());
-        };
-
-        let reply_content = format!("maybe the {noun} hidden");
-
-        let mentions_builder = CreateAllowedMentions::new().empty_roles().empty_roles();
-        let message_builder = CreateMessage::new()
-            .content(reply_content)
-            .reference_message(new_message)
-            .allowed_mentions(mentions_builder);
-
-        let _ = new_message
-            .channel_id
-            .send_message(&ctx.http, message_builder)
-            .await;
-    }
-    Ok(())
 }

@@ -117,6 +117,7 @@ pub fn configure_lua_env(
         modules::events::setup(lua, callbacks)?,
         modules::types::setup(lua)?,
         modules::me::setup(lua, http)?,
+        modules::hidden::setup(lua)?
     ];
 
     for builder in &builders {

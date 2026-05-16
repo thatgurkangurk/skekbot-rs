@@ -1,7 +1,6 @@
 use poise::serenity_prelude as serenity;
 use tracing::info;
 
-use crate::features;
 use crate::lua::lua_event_handler;
 use crate::{Data, Error};
 
@@ -13,7 +12,6 @@ pub async fn event_handler_root(
 ) -> Result<(), Error> {
     event_handler(ctx, event, framework, data).await?;
     lua_event_handler(ctx, event, framework, data).await?;
-    features::hidden::event_handler(ctx, event, framework, data).await?;
     Ok(())
 }
 

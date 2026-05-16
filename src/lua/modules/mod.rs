@@ -5,3 +5,4 @@ pub(super) mod me;
 pub mod rest;
 pub(super) mod types;
 pub(super) mod utils;
+pub(super) mod hidden;
