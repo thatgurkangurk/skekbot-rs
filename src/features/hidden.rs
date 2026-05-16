@@ -1,6 +1,5 @@
 use nlprule::{Tokenizer, tokenizer_filename};
 use phf::{phf_map, phf_set};
-use poise::serenity_prelude as serenity;
 use regex::Regex;
 use std::sync::LazyLock;
 

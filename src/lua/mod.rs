@@ -7,7 +7,7 @@ mod types;
 #[cfg(feature = "formatting")]
 mod format;
 
-use crate::server;
+use crate::{Config, server};
 use anyhow::{Context, Result};
 use mlua::{Lua, RegistryKey};
 use moka::future::Cache;
@@ -97,6 +97,7 @@ pub fn configure_lua_env(
     server_cache: &Cache<u64, server::Model>,
     db_conn: &DatabaseConnection,
     modules_path: &Path,
+    config: &Config,
 ) -> anyhow::Result<()> {
     let globals = lua.globals();
 
@@ -117,7 +118,8 @@ pub fn configure_lua_env(
         modules::events::setup(lua, callbacks)?,
         modules::types::setup(lua)?,
         modules::me::setup(lua, http)?,
-        modules::hidden::setup(lua)?
+        modules::hidden::setup(lua)?,
+        modules::env::setup(lua, config)?,
     ];
 
     for builder in &builders {
@@ -279,6 +281,7 @@ pub async fn reload_scripts(data: &Data, http: Arc<serenity::all::Http>) -> anyh
         &data.server_cache,
         &data.db,
         &Path::new(DATA_DIR).join("luau").join("modules"),
+        &data.config,
     )?;
 
     let scripts_path = std::path::Path::new(DATA_DIR).join("luau").join("scripts");

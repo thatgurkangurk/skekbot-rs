@@ -44,10 +44,17 @@ pub struct DbConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct LuaConfig {
+    #[serde(default)]
+    pub allow_env_access: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub bot: BotConfig,
     pub web: WebConfig,
     pub db: Option<DbConfig>,
+    pub lua: Option<LuaConfig>,
 }
 
 impl Config {
