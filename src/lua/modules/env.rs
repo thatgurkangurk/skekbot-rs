@@ -13,11 +13,8 @@ pub fn setup(lua: &Lua, config: &Config) -> anyhow::Result<ModuleBuilder> {
         "(key: string) -> string?",
         move |lua, key: String| {
             if !env_access_enabled {
-                // Safely extract debug info
                 let (source, line) = lua
                     .inspect_stack(1, |debug| {
-                        // FIX: `short_src` is already a parsed string (Cow<'_, str>).
-                        // We just need to convert it to an owned String!
                         let src = debug.source().short_src.as_ref().map_or_else(
                             || "<unknown>".to_string(),
                             std::string::ToString::to_string,
@@ -27,7 +24,6 @@ pub fn setup(lua: &Lua, config: &Config) -> anyhow::Result<ModuleBuilder> {
                     })
                     .unwrap_or_else(|| ("<unknown>".to_string(), Some(0)));
 
-                // Log the unauthorized access
                 tracing::error!(
                     lua_source = %source,
                     lua_line = line,
