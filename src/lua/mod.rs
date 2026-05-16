@@ -45,7 +45,7 @@ pub fn load_scripts(lua: &Lua, directory: impl AsRef<Path>) -> Result<()> {
 
     if !script_dir.exists() {
         tracing::info!("directory '{:?}' not found. creating it...", script_dir);
-        std::fs::create_dir_all(&script_dir).map_err(|e| {
+        std::fs::create_dir_all(script_dir).map_err(|e| {
             tracing::error!("failed to create directory '{:?}': {}", script_dir, e);
             e
         })?;

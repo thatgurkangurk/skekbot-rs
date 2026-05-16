@@ -44,7 +44,7 @@ pub async fn create_skekbot(
     // initialise luau early (pre-framework)
     // ==========================================
     let server_cache = Cache::builder()
-        .time_to_live(std::time::Duration::from_secs(300)) // 5 mins
+        .time_to_live(std::time::Duration::from_mins(5)) // 5 mins
         .build();
 
     tracing::info!("initialising luau...");
@@ -64,7 +64,7 @@ pub async fn create_skekbot(
             &server_cache,
             db,
             &Path::new(DATA_DIR).join("luau").join("modules"),
-            &config,
+            config,
         )
         .context("failed to configure the luau global environment")?;
 

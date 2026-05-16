@@ -112,7 +112,7 @@ async fn announce(
 
             if let Ok(mut member) = guild_id.member(&ctx.http(), loser.id).await {
                 let timeout_until = std::time::SystemTime::now()
-                    .checked_add(std::time::Duration::from_secs(60))
+                    .checked_add(std::time::Duration::from_mins(1))
                     .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                     .map(|d| d.as_secs().cast_signed());
 
@@ -179,7 +179,7 @@ pub async fn rock_paper_scissors(
     // start collector filtered by THIS message id
     let mut collector = serenity::ComponentInteractionCollector::new(ctx)
         .message_id(msg.id) // this prevents "stealing" clicks from other games
-        .timeout(std::time::Duration::from_secs(120))
+        .timeout(std::time::Duration::from_mins(2))
         .stream();
 
     while let Some(mci) = collector.next().await {

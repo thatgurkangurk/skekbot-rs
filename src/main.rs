@@ -42,7 +42,7 @@ fn print_startup_info() {
                 " ".repeat(right),
             )
         } else {
-            format!("{}{}{}", " ".repeat(left), line, " ".repeat(right),)
+            format!("{}{}{}", " ".repeat(left), line, " ".repeat(right))
         };
 
         println!(
