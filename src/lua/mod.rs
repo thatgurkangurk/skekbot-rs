@@ -83,6 +83,10 @@ pub fn load_scripts(lua: &Lua, directory: impl AsRef<Path>) -> Result<()> {
 
             if let Err(e) = lua.load(&code).set_name(&chunk_name).exec() {
                 tracing::error!("failed to parse or execute {:?}:\n{}", path, e);
+            } else if let Ok(executed_table) =
+                lua.named_registry_value::<mlua::Table>("__SKEKBOT_EXECUTED")
+            {
+                let _ = executed_table.set(file_str, true);
             }
         }
     }
@@ -108,6 +112,7 @@ pub fn configure_lua_env(
     // ==========================================
     let registry = lua.create_table()?;
     let loaded = lua.create_table()?;
+    let executed = lua.create_table()?;
 
     // ==========================================
     // register virtual modules
@@ -154,6 +159,7 @@ pub fn configure_lua_env(
     // store in named registry to prevent sandboxing from wiping them
     lua.set_named_registry_value("__SKEKBOT_REGISTRY", registry)?;
     lua.set_named_registry_value("__SKEKBOT_LOADED", loaded)?;
+    lua.set_named_registry_value("__SKEKBOT_EXECUTED", executed)?;
 
     // ==========================================
     // path resolution & sandboxed require
@@ -261,6 +267,28 @@ pub fn configure_lua_env(
     Ok(())
 }
 
+pub fn get_loaded_scripts(lua: &Lua) -> anyhow::Result<(Vec<String>, Vec<String>)> {
+    let mut scripts = Vec::new();
+    let mut modules = Vec::new();
+
+    if let Ok(executed) = lua.named_registry_value::<mlua::Table>("__SKEKBOT_EXECUTED") {
+        for (name, _) in executed.pairs::<String, mlua::Value>().flatten() {
+            scripts.push(name);
+        }
+    }
+
+    if let Ok(loaded) = lua.named_registry_value::<mlua::Table>("__SKEKBOT_LOADED") {
+        for (name, _) in loaded.pairs::<String, mlua::Value>().flatten() {
+            modules.push(name);
+        }
+    }
+
+    scripts.sort_unstable();
+    modules.sort_unstable();
+
+    Ok((scripts, modules))
+}
+
 pub async fn reload_scripts(data: &Data, http: Arc<serenity::all::Http>) -> anyhow::Result<()> {
     tracing::info!("reloading luau scripts...");
 
@@ -272,6 +300,7 @@ pub async fn reload_scripts(data: &Data, http: Arc<serenity::all::Http>) -> anyh
 
         callbacks.ready_events.clear();
         callbacks.message_create_events.clear();
+        callbacks.guild_member_update_events.clear();
     } // lock drops here
 
     let lua = data.lua.lock().await;

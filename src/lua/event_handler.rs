@@ -80,7 +80,6 @@ pub async fn lua_event_handler(
                 (funcs, lua_value)
             };
 
-            // 5. Execute all registered Lua callbacks asynchronously with a timeout
             for func in funcs {
                 let exec_future = func.call_async::<()>(lua_msg.clone());
                 if let Err(e) = timeout(Duration::from_secs(5), exec_future).await {

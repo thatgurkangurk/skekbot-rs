@@ -97,6 +97,7 @@ pub async fn create_skekbot(
             commands::quote::quote(),
             commands::config::refresh_config(),
             commands::luau::reload(),
+            commands::luau::list_loaded_scripts(),
         ],
         event_handler: |ctx, event, framework, data| {
             Box::pin(event_handler_root(ctx, event, framework, data))
