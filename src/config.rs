@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use serenity::model::id::UserId;
+use serenity::model::id::{GuildId, RoleId, UserId};
 
 use crate::util::validate_token;
 
@@ -34,6 +34,12 @@ pub struct BotConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct TraitorSpecificConfig {
+    pub discord_server_id: GuildId,
+    pub moderator_role_ids: Vec<RoleId>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct WebConfig {
     pub password: String,
 }
@@ -55,6 +61,7 @@ pub struct Config {
     pub web: WebConfig,
     pub db: Option<DbConfig>,
     pub lua: Option<LuaConfig>,
+    pub traitor: Option<TraitorSpecificConfig>,
 }
 
 impl Config {
