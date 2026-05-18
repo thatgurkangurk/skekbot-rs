@@ -105,10 +105,21 @@ pub async fn create_skekbot(
         ..Default::default()
     };
 
+    let traitor_only_commands = vec![
+        commands::traitor_only::ban::ban(),
+    ];
+
+    let traitor_discord_id = config.bot.traitor_discord_id;
+
     let framework = poise::Framework::builder()
         .setup(move |ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+
+                if let Some(traitor_guild_id) = traitor_discord_id {
+                    poise::builtins::register_in_guild(ctx, &traitor_only_commands, traitor_guild_id).await?;
+                }
+
                 {
                     let lua_lock = lua_clone.lock().await;
                     let rest_mod = crate::lua::modules::rest::setup(&lua_lock, &ctx.http)?;

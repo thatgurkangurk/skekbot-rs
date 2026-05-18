@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use serenity::model::id::UserId;
+use serenity::model::id::{GuildId, UserId};
 
 use crate::util::validate_token;
 
@@ -31,6 +31,7 @@ impl AsRef<str> for DiscordToken {
 pub struct BotConfig {
     pub token: DiscordToken,
     pub owners: Option<Vec<UserId>>,
+    pub traitor_discord_id: Option<GuildId>
 }
 
 #[derive(Debug, Clone, Deserialize)]
