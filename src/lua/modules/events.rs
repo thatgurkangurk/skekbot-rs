@@ -27,5 +27,11 @@ pub fn setup(lua: &Lua, callbacks: &Arc<StdMutex<BotCallbacks>>) -> anyhow::Resu
         create_signal(lua, &Arc::clone(callbacks), EventType::MessageCreate)?,
     )?;
 
+    builder.add_value(
+        "OnGuildMemberUpdate",
+        "Signal<Types.GuildMemberUpdate>",
+        create_signal(lua, &Arc::clone(callbacks), EventType::GuildMemberUpdate)?,
+    )?;
+
     Ok(builder)
 }

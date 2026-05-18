@@ -6,7 +6,7 @@ use poise::serenity_prelude as serenity;
 
 use crate::{
     Data, Error,
-    lua::modules::types::{LuaMessage, LuaUser},
+    lua::modules::types::{LuaGuildMemberUpdate, LuaMessage, LuaUser},
 };
 
 #[allow(clippy::significant_drop_tightening)]
@@ -38,6 +38,56 @@ pub async fn lua_event_handler(
 
                 if let Err(e) = timeout(Duration::from_secs(5), exec_future).await {
                     tracing::error!("luau OnReady script timed out or failed: {:?}", e);
+                }
+            }
+        }
+
+        serenity::FullEvent::GuildMemberUpdate {
+            old_if_available: _,
+            new: _,
+            event,
+        } => {
+            let (funcs, lua_msg) = {
+                let lua = data.lua.lock().await;
+
+                let funcs = {
+                    let cb = data
+                        .lua_callbacks
+                        .lock()
+                        .map_err(|_| anyhow::anyhow!("lua callbacks mutex poisoned"))?;
+
+                    cb.guild_member_update_events
+                        .values()
+                        .filter_map(|key| lua.registry_value::<Function>(key).ok())
+                        .collect::<Vec<_>>()
+                };
+
+                let user_data = LuaUser {
+                    id: event.user.id.get().to_string(),
+                    bot: event.user.bot,
+                    global_name: event.user.global_name.clone(),
+                    username: event.user.name.clone(),
+                };
+
+                let update_data = LuaGuildMemberUpdate {
+                    guild_id: event.guild_id.get().to_string(),
+                    user: user_data,
+                    nick: event.nick.clone(),
+                };
+
+                let lua_value = lua.to_value(&update_data)?;
+
+                (funcs, lua_value)
+            };
+
+            // 5. Execute all registered Lua callbacks asynchronously with a timeout
+            for func in funcs {
+                let exec_future = func.call_async::<()>(lua_msg.clone());
+                if let Err(e) = timeout(Duration::from_secs(5), exec_future).await {
+                    tracing::error!(
+                        "Luau OnGuildMemberUpdate script timed out or failed: {:?}",
+                        e
+                    );
                 }
             }
         }

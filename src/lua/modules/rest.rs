@@ -1,6 +1,9 @@
-use ::serenity::model::{
-    channel::{MessageReference, MessageReferenceKind},
-    id::{ChannelId, MessageId},
+use ::serenity::{
+    builder::EditMember,
+    model::{
+        channel::{MessageReference, MessageReferenceKind},
+        id::{ChannelId, MessageId},
+    },
 };
 use mlua::Lua;
 use poise::serenity_prelude as serenity;
@@ -32,6 +35,40 @@ pub fn setup(lua: &Lua, http: &Arc<serenity::Http>) -> anyhow::Result<ModuleBuil
 
                 channel_id
                     .send_message(&http, message_builder)
+                    .await
+                    .map_err(|e| mlua::Error::RuntimeError(format!("discord api error: {e}")))?;
+
+                Ok(())
+            }
+        },
+    )?;
+
+    let http_set_user_nickname = Arc::clone(http);
+
+    builder.add_async_function(
+        lua,
+        "setUserNickname",
+        "(user_id: string, guild_id: string, new_nickname: string) -> ()",
+        move |_, (user_id_str, guild_id_str, new_nickname): (String, String, String)| {
+            let http = Arc::clone(&http_set_user_nickname);
+            async move {
+                let user_id_u64 = user_id_str.parse::<u64>().map_err(|_| {
+                    mlua::Error::RuntimeError(
+                        "invalid user id: must be a numeric string".to_string(),
+                    )
+                })?;
+
+                let guild_id_u64 = guild_id_str.parse::<u64>().map_err(|_| {
+                    mlua::Error::RuntimeError(
+                        "invalid guild id: must be a numeric string".to_string(),
+                    )
+                })?;
+
+                let user_id = serenity::UserId::new(user_id_u64);
+                let guild_id = serenity::GuildId::new(guild_id_u64);
+
+                guild_id
+                    .edit_member(http, user_id, EditMember::new().nickname(new_nickname))
                     .await
                     .map_err(|e| mlua::Error::RuntimeError(format!("discord api error: {e}")))?;
 

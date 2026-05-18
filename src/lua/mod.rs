@@ -30,12 +30,14 @@ static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
 pub struct BotCallbacks {
     ready_events: HashMap<u64, RegistryKey>,
     message_create_events: HashMap<u64, RegistryKey>,
+    guild_member_update_events: HashMap<u64, RegistryKey>,
 }
 
 #[derive(Copy, Clone)]
 enum EventType {
     Ready,
     MessageCreate,
+    GuildMemberUpdate,
 }
 
 pub use event_handler::lua_event_handler;

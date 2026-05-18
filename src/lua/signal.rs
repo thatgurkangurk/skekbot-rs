@@ -30,6 +30,9 @@ pub fn create_signal(
                 EventType::MessageCreate => {
                     cb.message_create_events.insert(id, key);
                 }
+                EventType::GuildMemberUpdate => {
+                    cb.guild_member_update_events.insert(id, key);
+                }
             }
         } // lock drops here
 
@@ -47,6 +50,7 @@ pub fn create_signal(
                 match event_type {
                     EventType::Ready => cb.ready_events.remove(&id),
                     EventType::MessageCreate => cb.message_create_events.remove(&id),
+                    EventType::GuildMemberUpdate => cb.guild_member_update_events.remove(&id),
                 }
             };
 

@@ -38,7 +38,8 @@ pub async fn create_skekbot(
 ) -> anyhow::Result<(Client, BotState)> {
     let intents = serenity::GatewayIntents::GUILDS
         | serenity::GatewayIntents::GUILD_MESSAGES
-        | serenity::GatewayIntents::MESSAGE_CONTENT;
+        | serenity::GatewayIntents::MESSAGE_CONTENT
+        | serenity::GatewayIntents::GUILD_MEMBERS;
 
     // ==========================================
     // initialise luau early (pre-framework)

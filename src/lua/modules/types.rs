@@ -32,6 +32,14 @@ pub struct LuaUser {
     pub global_name: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Type, Clone, Debug)]
+#[serde(rename = "GuildMemberUpdate")]
+pub struct LuaGuildMemberUpdate {
+    pub guild_id: String,
+    pub user: LuaUser,
+    pub nick: Option<String>,
+}
+
 impl FromLua for LuaUser {
     fn from_lua(value: Value, lua: &Lua) -> mlua::Result<Self> {
         lua.from_value(value)
@@ -44,6 +52,7 @@ pub fn setup(lua: &Lua) -> anyhow::Result<ModuleBuilder> {
     builder.declare_struct_as::<server::Model>("ServerSettings");
     builder.declare_struct_as::<LuaUser>("User");
     builder.declare_struct_as::<LuaMessage>("Message");
+    builder.declare_struct_as::<LuaGuildMemberUpdate>("GuildMemberUpdate");
 
     Ok(builder)
 }
