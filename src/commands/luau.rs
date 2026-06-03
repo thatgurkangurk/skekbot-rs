@@ -33,8 +33,7 @@ pub async fn list_loaded_scripts(ctx: Context<'_>) -> Result<(), Error> {
             let mut response = String::new();
 
             if scripts.is_empty() && modules.is_empty() {
-                ctx.say("no scripts are currently loaded")
-                    .await?;
+                ctx.say("no scripts are currently loaded").await?;
                 return Ok(());
             }
 
