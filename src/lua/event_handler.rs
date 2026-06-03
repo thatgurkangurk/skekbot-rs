@@ -6,7 +6,10 @@ use poise::serenity_prelude as serenity;
 
 use crate::{
     Data, Error,
-    lua::{BotCallbacks, modules::types::{LuaGuildMemberUpdate, LuaMessage, LuaUser}},
+    lua::{
+        BotCallbacks,
+        modules::types::{LuaGuildMemberUpdate, LuaMessage, LuaUser},
+    },
 };
 
 /// helper to safely lock callbacks and extract lua(u) functions from the registry
@@ -20,9 +23,9 @@ fn get_lua_callbacks(
             .lua_callbacks
             .lock()
             .map_err(|_| anyhow::anyhow!("lua callbacks mutex poisoned"))?;
-        
+
         let map = selector(&cb);
-        
+
         map.values()
             .filter_map(|key| lua.registry_value::<Function>(key).ok())
             .collect()
@@ -74,7 +77,10 @@ async fn handle_guild_member_update(
     for func in funcs {
         let exec_future = func.call_async::<()>(lua_msg.clone());
         if let Err(e) = timeout(Duration::from_secs(5), exec_future).await {
-            tracing::error!("Luau OnGuildMemberUpdate script timed out or failed: {:?}", e);
+            tracing::error!(
+                "Luau OnGuildMemberUpdate script timed out or failed: {:?}",
+                e
+            );
         }
     }
 

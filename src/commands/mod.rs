@@ -1,5 +1,6 @@
 pub mod config;
 pub mod dad;
+pub mod fun;
 pub mod info;
 pub mod luau;
 pub mod ping;
