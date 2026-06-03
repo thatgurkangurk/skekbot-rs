@@ -95,14 +95,13 @@ pub async fn create_skekbot(
         commands::info::info(),
         commands::quote::quote(),
         commands::config::refresh_config(),
-        commands::luau::reload(),
-        commands::luau::list_loaded_scripts(),
     ];
 
     commands.extend(commands::fun::fun_commands());
+    commands.extend(commands::luau::luau_commands());
 
     let options = poise::FrameworkOptions {
-        commands: commands,
+        commands,
         event_handler: |ctx, event, framework, data| {
             Box::pin(event_handler_root(ctx, event, framework, data))
         },

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use crate::{Context, Error, lua::get_loaded_scripts, lua::reload_scripts};
+use crate::{Context, Data, Error, lua::{get_loaded_scripts, reload_scripts}};
 
 #[poise::command(slash_command, owners_only)]
 /// reload luau scripts
-pub async fn reload(ctx: Context<'_>) -> Result<(), Error> {
+async fn reload(ctx: Context<'_>) -> Result<(), Error> {
     let data = ctx.data();
     let http = Arc::clone(&ctx.serenity_context().http);
 
@@ -24,7 +24,7 @@ pub async fn reload(ctx: Context<'_>) -> Result<(), Error> {
 
 #[poise::command(slash_command, owners_only)]
 /// list all currently loaded luau scripts
-pub async fn list_loaded_scripts(ctx: Context<'_>) -> Result<(), Error> {
+async fn list_loaded_scripts(ctx: Context<'_>) -> Result<(), Error> {
     let data = ctx.data();
     let lua_guard = data.lua.lock().await;
 
@@ -70,4 +70,8 @@ pub async fn list_loaded_scripts(ctx: Context<'_>) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+pub fn luau_commands() -> Vec<poise::Command<Data, Error>> {
+    vec![reload(), list_loaded_scripts()]
 }
