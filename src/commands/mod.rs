@@ -6,3 +6,4 @@ pub mod luau;
 pub mod ping;
 pub mod quote;
 pub mod rock_paper_scissors;
+pub mod traitor_only;
